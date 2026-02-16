@@ -4,7 +4,7 @@ import logging
 import os
 from typing import Any, Literal
 
-from browser_use_sdk import Asyncwebagent
+from browser_use_sdk import AsyncBrowserUse
 from browser_use_sdk.types.execute_skill_response import ExecuteSkillResponse
 from browser_use_sdk.types.skill_list_response import SkillListResponse
 from cdp_use.cdp.network import Cookie
@@ -35,7 +35,7 @@ class SkillService:
 			raise ValueError('web_agent_API_KEY environment variable is not set')
 
 		self._skills: dict[str, Skill] = {}
-		self._client: Asyncwebagent | None = None
+		self._client: AsyncBrowserUse | None = None
 		self._initialized = False
 
 	async def async_init(self) -> None:
@@ -49,7 +49,7 @@ class SkillService:
 			return
 
 		# Create the SDK client
-		self._client = Asyncwebagent(api_key=self.api_key)
+		self._client = AsyncBrowserUse(api_key=self.api_key)
 
 		try:
 			# Fetch skills from API
@@ -278,7 +278,7 @@ class SkillService:
 	async def close(self) -> None:
 		"""Close the SDK client and cleanup resources"""
 		if self._client is not None:
-			# Asyncwebagent client cleanup if needed
+			# AsyncBrowserUse client cleanup if needed
 			# The SDK doesn't currently have a close method, but we set to None for cleanup
 			self._client = None
 		self._initialized = False

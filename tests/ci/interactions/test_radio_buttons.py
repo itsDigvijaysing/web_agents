@@ -68,8 +68,8 @@ async def browser_session():
 
 
 @pytest.mark.skipif(
-	os.getenv('CI') == 'true' or os.getenv('GITHUB_ACTIONS') == 'true',
-	reason='Skipped in CI: requires real LLM API key which blocks other tests',
+	os.getenv('CI') == 'true' or os.getenv('GITHUB_ACTIONS') == 'true' or not os.getenv('web_agent_API_KEY'),
+	reason='Skipped: requires real LLM API key (web_agent_API_KEY)',
 )
 class TestRadioButtons:
 	"""Test cases for radio button interactions."""

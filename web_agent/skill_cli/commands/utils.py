@@ -2,19 +2,19 @@
 
 from datetime import datetime, timezone
 
-from browser_use_sdk import webagent
+from browser_use_sdk import BrowserUse
 
-_client: webagent | None = None
+_client: BrowserUse | None = None
 
 
-def get_sdk_client() -> webagent:
+def get_sdk_client() -> BrowserUse:
 	"""Get authenticated SDK client (singleton)."""
 	global _client
 	if _client is None:
 		from web_agent.skill_cli.api_key import require_api_key
 
 		api_key = require_api_key('Cloud API')
-		_client = webagent(api_key=api_key)
+		_client = BrowserUse(api_key=api_key)
 	return _client
 
 
