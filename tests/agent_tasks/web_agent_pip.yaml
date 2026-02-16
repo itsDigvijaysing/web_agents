@@ -1,0 +1,5 @@
+name: Find pip install command for web-agent
+task: Find the pip installation command for the web-agent repo
+judge_context:
+  - The output must include the command ('pip install web-agent') 
+max_steps: 10

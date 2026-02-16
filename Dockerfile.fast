@@ -1,0 +1,31 @@
+# Fast Dockerfile using pre-built base images
+ARG REGISTRY=webagent
+ARG BASE_TAG=latest
+FROM ${REGISTRY}/base-python-deps:${BASE_TAG}
+
+LABEL name="webagent" description="Browser automation for AI agents"
+
+ENV webagent_USER="webagent" DEFAULT_PUID=911 DEFAULT_PGID=911 DATA_DIR=/data
+
+# Create user and directories
+RUN groupadd --system $webagent_USER && \
+    useradd --system --create-home --gid $webagent_USER --groups audio,video $webagent_USER && \
+    usermod -u "$DEFAULT_PUID" "$webagent_USER" && \
+    groupmod -g "$DEFAULT_PGID" "$webagent_USER" && \
+    mkdir -p /data /home/$webagent_USER/.config && \
+    ln -s $DATA_DIR /home/$webagent_USER/.config/webagent && \
+    mkdir -p "/home/$webagent_USER/.config/chromium/Crash Reports/pending/" && \
+    mkdir -p "$DATA_DIR/profiles/default" && \
+    chown -R "$webagent_USER:$webagent_USER" "/home/$webagent_USER" "$DATA_DIR"
+
+WORKDIR /app
+COPY . /app
+
+# Install web-agent
+RUN --mount=type=cache,target=/root/.cache/uv,sharing=locked \
+    uv sync --all-extras --locked --no-dev --compile-bytecode
+
+USER "$webagent_USER"
+VOLUME "$DATA_DIR"
+EXPOSE 9242 9222
+ENTRYPOINT ["web-agent"]
