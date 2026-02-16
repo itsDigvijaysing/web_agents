@@ -1,296 +1,224 @@
-<picture>
-  <source media="(prefers-color-scheme: light)" srcset="https://github.com/user-attachments/assets/2ccdb752-22fb-41c7-8948-857fc1ad7e24"">
-  <source media="(prefers-color-scheme: dark)" srcset="https://github.com/user-attachments/assets/774a46d5-27a0-490c-b7d0-e65fcbbfa358">
-  <img alt="Shows a black web agent Logo in light color mode and a white one in dark color mode." src="https://github.com/user-attachments/assets/2ccdb752-22fb-41c7-8948-857fc1ad7e24"  width="full">
-</picture>
+# web-agent
 
-<div align="center">
-    <picture>
-    <source media="(prefers-color-scheme: light)" srcset="https://github.com/user-attachments/assets/9955dda9-ede3-4971-8ee0-91cbc3850125"">
-    <source media="(prefers-color-scheme: dark)" srcset="https://github.com/user-attachments/assets/6797d09b-8ac3-4cb9-ba07-b289e080765a">
-    <img alt="The AI browser agent." src="https://github.com/user-attachments/assets/9955dda9-ede3-4971-8ee0-91cbc3850125"  width="400">
-    </picture>
-</div>
+AI-powered browser automation using LLMs and Chrome DevTools Protocol (CDP).
 
-<div align="center">
-<a href="https://cloud.web-agent.com"><img src="https://media.web-agent.tools/badges/package" height="48" alt="web-agent Package Download Statistics"></a>
-</div>
+`web-agent` is an async Python library that enables AI agents to autonomously navigate web pages, interact with elements, and complete complex tasks by processing HTML/DOM state and making LLM-driven decisions.
 
----
+## Features
 
-<div align="center">
-<a href="#demos"><img src="https://media.web-agent.tools/badges/demos" alt="Demos"></a>
-<img width="16" height="1" alt="">
-<a href="https://docs.web-agent.com"><img src="https://media.web-agent.tools/badges/docs" alt="Docs"></a>
-<img width="16" height="1" alt="">
-<a href="https://web-agent.com/posts"><img src="https://media.web-agent.tools/badges/blog" alt="Blog"></a>
-<img width="16" height="1" alt="">
-<a href="https://browsermerch.com"><img src="https://media.web-agent.tools/badges/merch" alt="Merch"></a>
-<img width="100" height="1" alt="">
-<a href="https://github.com/web-agent/web-agent"><img src="https://media.web-agent.tools/badges/github" alt="Github Stars"></a>
-<img width="4" height="1" alt="">
-<a href="https://x.com/intent/user?screen_name=web_agent"><img src="https://media.web-agent.tools/badges/twitter" alt="Twitter"></a>
-<img width="4 height="1" alt="">
-<a href="https://link.web-agent.com/discord"><img src="https://media.web-agent.tools/badges/discord" alt="Discord"></a>
-<img width="4" height="1" alt="">
-<a href="https://cloud.web-agent.com"><img src="https://media.web-agent.tools/badges/cloud" height="48" alt="web-agent Cloud"></a>
-</div>
+- **Multi-LLM Support** — OpenAI, Anthropic, Google Gemini, Groq, Ollama, Azure, AWS Bedrock, and more
+- **Chrome DevTools Protocol** — Direct browser control via CDP through [cdp-use](https://github.com/web-agent/cdp-use)
+- **Event-Driven Architecture** — Modular watchdog system for downloads, popups, security, DOM, and crash handling
+- **MCP Integration** — Run as an MCP server for Claude Desktop or connect to external MCP servers
+- **Code Agent** — Jupyter-like code execution capabilities for data analysis tasks
+- **Cloud Support** — Optional hosted browser instances via web-agent Cloud
+- **Sandboxed Execution** — Isolated browser environments for safe automation
+- **DOM Serialization** — Intelligent DOM extraction with accessibility tree generation and element highlighting
 
-</br>
+## Quick Start
 
-🌤️ Want to skip the setup? Use our <b>[cloud](https://cloud.web-agent.com)</b> for faster, scalable, stealth-enabled browser automation!
+### Prerequisites
 
-# 🤖 LLM Quickstart
+- Python >= 3.11
+- Chrome or Chromium browser
+- An LLM API key (Google Gemini, OpenAI, Anthropic, etc.)
 
-1. Direct your favorite coding agent (Cursor, Claude Code, etc) to [Agents.md](https://docs.web-agent.com/llms-full.txt)
-2. Prompt away!
+### Installation
 
-<br/>
-
-# 👋 Human Quickstart
-
-**1. Create environment with [uv](https://docs.astral.sh/uv/) (Python>=3.11):**
 ```bash
-uv init
-```
-
-**2. Install web-agent package:**
-```bash
-#  We ship every day - use the latest version!
-uv add web-agent
+# Using uv (recommended)
+uv venv --python 3.12
+source .venv/bin/activate
 uv sync
+
+# Or with pip
+pip install web-agent
 ```
 
-**3. Get your API key from [web agent Cloud](https://cloud.web-agent.com/new-api-key) and add it to your `.env` file (new signups get $10 free credits):**
-```
-# .env
-web_agent_API_KEY=your-key
-```
+### Environment Setup
 
-**4. Install Chromium browser:**
+Copy the example environment file and add your API key:
+
 ```bash
-uvx web-agent install
+cp .env.example .env
 ```
 
-**5. Run your first agent:**
+Edit `.env` and set your LLM provider key:
+
+```env
+GOOGLE_API_KEY=your_google_api_key_here
+# or
+OPENAI_API_KEY=your_openai_api_key_here
+# or
+ANTHROPIC_API_KEY=your_anthropic_api_key_here
+```
+
+If Chrome isn't in your PATH, set the executable path:
+
+```env
+web_agent_EXECUTABLE_PATH=/path/to/chrome
+```
+
+### Basic Usage
+
 ```python
-from web_agent import Agent, Browser, Chatwebagent
 import asyncio
+from web_agent import Agent
+from web_agent.llm.google import ChatGoogle
 
-async def example():
-    browser = Browser(
-        # use_cloud=True,  # Uncomment to use a stealth browser on web agent Cloud
-    )
-
-    llm = Chatwebagent()
-
+async def main():
+    llm = ChatGoogle(model="gemini-2.0-flash")
     agent = Agent(
-        task="Find the number of stars of the web-agent repo",
+        task="Search Google for 'browser automation' and tell me the top 3 results",
         llm=llm,
-        browser=browser,
     )
+    result = await agent.run()
+    print(result.final_result())
 
-    history = await agent.run()
-    return history
-
-if __name__ == "__main__":
-    history = asyncio.run(example())
+asyncio.run(main())
 ```
 
-Check out the [library docs](https://docs.web-agent.com) and the [cloud docs](https://docs.cloud.web-agent.com) for more!
-
-<br/>
-
-# 🔥 Deploy on Sandboxes
-
-We handle agents, browsers, persistence, auth, cookies, and LLMs. The agent runs right next to the browser for minimal latency.
+### Form Filling Example
 
 ```python
-from web_agent import Browser, sandbox, Chatwebagent
-from web_agent.agent.service import Agent
 import asyncio
+from web_agent import Agent
+from web_agent.llm.google import ChatGoogle
 
-@sandbox()
-async def my_task(browser: Browser):
-    agent = Agent(task="Find the top HN post", browser=browser, llm=Chatwebagent())
+async def main():
+    llm = ChatGoogle(model="gemini-2.0-flash")
+    agent = Agent(
+        task=(
+            "Go to https://httpbin.org/forms/post and fill out the form with: "
+            "Customer name: John Doe, Telephone: 555-1234, "
+            "Email: john@example.com, Size: Medium, "
+            "Topping: Cheese. Then submit the form."
+        ),
+        llm=llm,
+    )
     await agent.run()
 
-# Just call it like any async function
-asyncio.run(my_task())
+asyncio.run(main())
 ```
 
-See [Going to Production](https://docs.web-agent.com/production) for more details.
+## CLI
 
-<br/>
-
-# 🚀 Template Quickstart
-
-**Want to get started even faster?** Generate a ready-to-run template:
+The library includes multiple CLI entry points:
 
 ```bash
-uvx web-agent init --template default
+# Primary CLI commands (all aliases for the same tool)
+web-agent <command>
+webagent <command>
+bu <command>
+
+# Run as MCP server (for Claude Desktop integration)
+web-agent --mcp
 ```
 
-This creates a `web_agent_default.py` file with a working example. Available templates:
-- `default` - Minimal setup to get started quickly
-- `advanced` - All configuration options with detailed comments
-- `tools` - Examples of custom tools and extending the agent
+## Architecture
 
-You can also specify a custom output path:
+```
+web_agent/
+├── agent/           # Core agent orchestrator (task loop, LLM interaction)
+├── browser/         # Browser session lifecycle, CDP, watchdog services
+│   ├── cloud/       # Cloud browser instance management
+│   └── watchdogs/   # Downloads, popups, security, DOM, crash handlers
+├── dom/             # DOM extraction, serialization, accessibility tree
+├── llm/             # Multi-provider LLM abstraction layer
+│   ├── google/      # Gemini
+│   ├── openai/      # GPT-4o, etc.
+│   ├── anthropic/   # Claude
+│   ├── groq/        # Groq
+│   ├── ollama/      # Local models
+│   └── ...          # Azure, AWS, Mistral, DeepSeek, etc.
+├── tools/           # Action registry (click, type, scroll, navigate)
+├── mcp/             # Model Context Protocol server/client
+├── code_use/        # Jupyter-like code execution agent
+├── skills/          # Cloud skills API integration
+├── sandbox/         # Sandboxed browser execution
+└── tokens/          # Token cost tracking and billing
+```
+
+### Key Components
+
+| Component | Description |
+|-----------|-------------|
+| **Agent** | Main orchestrator — takes tasks, manages browser sessions, runs LLM action loop |
+| **BrowserSession** | Manages browser lifecycle, CDP connections, coordinates watchdog services via event bus |
+| **Tools** | Action registry mapping LLM decisions to browser operations |
+| **DomService** | Extracts and processes DOM content, handles element highlighting and a11y tree |
+| **LLM Layer** | Unified abstraction across OpenAI, Anthropic, Google, Groq, Ollama, and more |
+
+### Event-Driven Browser Management
+
+BrowserSession uses a [bubus](https://pypi.org/project/bubus/) event bus to coordinate watchdog services:
+
+- **DownloadsWatchdog** — File download handling
+- **PopupsWatchdog** — JavaScript dialog management
+- **SecurityWatchdog** — Domain restrictions and security policies
+- **DOMWatchdog** — DOM snapshots, screenshots, element highlighting
+- **CrashWatchdog** — Browser crash detection and recovery
+
+## Development
+
+### Testing
+
 ```bash
-uvx web-agent init --template default --output my_agent.py
+# Run CI test suite
+uv run pytest -vxs tests/ci
+
+# Run specific test file
+uv run pytest -vxs tests/ci/test_specific.py
+
+# Run all tests (including integration)
+uv run pytest -vxs tests/
 ```
 
-<br/>
-
-# 💻 CLI
-
-Fast, persistent browser automation from the command line:
+### Code Quality
 
 ```bash
-web-agent open https://example.com    # Navigate to URL
-web-agent state                       # See clickable elements
-web-agent click 5                     # Click element by index
-web-agent type "Hello"                # Type text
-web-agent screenshot page.png         # Take screenshot
-web-agent close                       # Close browser
+# Type checking
+uv run pyright
+
+# Linting and auto-fix
+uv run ruff check --fix
+
+# Formatting
+uv run ruff format
+
+# Pre-commit hooks
+uv run pre-commit run --all-files
 ```
 
-The CLI keeps the browser running between commands for fast iteration. See [CLI docs](web_agent/skill_cli/README.md) for all commands.
+## Supported Models
 
-### Claude Code Skill
+| Provider | Models | Env Variable |
+|----------|--------|-------------|
+| Google | Gemini 2.0 Flash, Gemini Pro | `GOOGLE_API_KEY` |
+| OpenAI | GPT-4o, GPT-4o-mini | `OPENAI_API_KEY` |
+| Anthropic | Claude 3.5 Sonnet, Claude 3 | `ANTHROPIC_API_KEY` |
+| Groq | LLaMA, Mixtral | `GROQ_API_KEY` |
+| Ollama | Any local model | (local) |
+| Azure | Azure OpenAI models | `AZURE_OPENAI_API_KEY` |
+| AWS | Bedrock models | `AWS_ACCESS_KEY_ID` |
+| DeepSeek | DeepSeek models | `DEEPSEEK_API_KEY` |
 
-For [Claude Code](https://claude.ai/code), install the skill to enable AI-assisted browser automation:
+## Roadmap
 
-```bash
-mkdir -p ~/.claude/skills/web-agent
-curl -o ~/.claude/skills/web-agent/SKILL.md \
-  https://raw.githubusercontent.com/web-agent/web-agent/main/skills/web-agent/SKILL.md
-```
+- **Vision Pipeline Optimization** — Enhanced screenshot and visual element processing for better LLM understanding
+- **RAG-Based Navigation** — Pre-defined reference documents for complex workflows (flight booking, multi-step forms) that the model can use as guides
+- **mem0-Inspired Context System** — High-context history management for long-running agent sessions with persistent memory across tasks
 
-<br/>
+## Configuration
 
-# Demos
+See [.env.example](.env.example) for all available configuration options including:
 
+- Logging levels and file paths
+- LLM provider API keys
+- Browser executable path and headless mode
+- Proxy configuration
+- Telemetry settings
 
-### 📋 Form-Filling
-#### Task = "Fill in this job application with my resume and information."
-![Job Application Demo](https://github.com/user-attachments/assets/57865ee6-6004-49d5-b2c2-6dff39ec2ba9)
-[Example code ↗](https://github.com/web-agent/web-agent/blob/main/examples/use-cases/apply_to_job.py)
+## License
 
-
-### 🍎 Grocery-Shopping
-#### Task = "Put this list of items into my instacart."
-
-https://github.com/user-attachments/assets/a6813fa7-4a7c-40a6-b4aa-382bf88b1850
-
-[Example code ↗](https://github.com/web-agent/web-agent/blob/main/examples/use-cases/buy_groceries.py)
-
-
-### 💻 Personal-Assistant.
-#### Task = "Help me find parts for a custom PC."
-
-https://github.com/user-attachments/assets/ac34f75c-057a-43ef-ad06-5b2c9d42bf06
-
-[Example code ↗](https://github.com/web-agent/web-agent/blob/main/examples/use-cases/pcpartpicker.py)
-
-
-### 💡See [more examples here ↗](https://docs.web-agent.com/examples) and give us a star!
-
-<br/>
-
-## Integrations, hosting, custom tools, MCP, and more on our [Docs ↗](https://docs.web-agent.com)
-
-<br/>
-
-# FAQ
-
-<details>
-<summary><b>What's the best model to use?</b></summary>
-
-We optimized **Chatwebagent()** specifically for browser automation tasks. On avg it completes tasks 3-5x faster than other models with SOTA accuracy.
-
-**Pricing (per 1M tokens):**
-- Input tokens: $0.20
-- Cached input tokens: $0.02
-- Output tokens: $2.00
-
-For other LLM providers, see our [supported models documentation](https://docs.web-agent.com/supported-models).
-</details>
-
-
-<details>
-<summary><b>Can I use custom tools with the agent?</b></summary>
-
-Yes! You can add custom tools to extend the agent's capabilities:
-
-```python
-from web_agent import Tools
-
-tools = Tools()
-
-@tools.action(description='Description of what this tool does.')
-def custom_tool(param: str) -> str:
-    return f"Result: {param}"
-
-agent = Agent(
-    task="Your task",
-    llm=llm,
-    browser=browser,
-    tools=tools,
-)
-```
-
-</details>
-
-<details>
-<summary><b>Can I use this for free?</b></summary>
-
-Yes! web-agent is open source and free to use. You only need to choose an LLM provider (like OpenAI, Google, Chatwebagent, or run local models with Ollama).
-</details>
-
-<details>
-<summary><b>How do I handle authentication?</b></summary>
-
-Check out our authentication examples:
-- [Using real browser profiles](https://github.com/web-agent/web-agent/blob/main/examples/browser/real_browser.py) - Reuse your existing Chrome profile with saved logins
-- If you want to use temporary accounts with inbox, choose AgentMail
-- To sync your auth profile with the remote browser, run `curl -fsSL https://web-agent.com/profile.sh | web_agent_API_KEY=XXXX sh` (replace XXXX with your API key)
-
-These examples show how to maintain sessions and handle authentication seamlessly.
-</details>
-
-<details>
-<summary><b>How do I solve CAPTCHAs?</b></summary>
-
-For CAPTCHA handling, you need better browser fingerprinting and proxies. Use [web agent Cloud](https://cloud.web-agent.com) which provides stealth browsers designed to avoid detection and CAPTCHA challenges.
-</details>
-
-<details>
-<summary><b>How do I go into production?</b></summary>
-
-Chrome can consume a lot of memory, and running many agents in parallel can be tricky to manage.
-
-For production use cases, use our [web agent Cloud API](https://cloud.web-agent.com) which handles:
-- Scalable browser infrastructure
-- Memory management
-- Proxy rotation
-- Stealth browser fingerprinting
-- High-performance parallel execution
-</details>
-
-<br/>
-
-<div align="center">
-
-**Tell your computer what to do, and it gets it done.**
-
-<img src="https://github.com/user-attachments/assets/06fa3078-8461-4560-b434-445510c1766f" width="400"/>
-
-[![Twitter Follow](https://img.shields.io/twitter/follow/Magnus?style=social)](https://x.com/intent/user?screen_name=mamagnus00)
-&emsp;&emsp;&emsp;
-[![Twitter Follow](https://img.shields.io/twitter/follow/Gregor?style=social)](https://x.com/intent/user?screen_name=gregpr07)
-
-</div>
-
-<div align="center"> Made with ❤️ in Zurich and San Francisco </div>
+MIT License — see [LICENSE](LICENSE) for details.

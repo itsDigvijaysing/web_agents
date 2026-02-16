@@ -11,10 +11,10 @@ import logging
 import sys
 from typing import Any
 
-from web_agent_sdk.types.task_created_response import TaskCreatedResponse
-from web_agent_sdk.types.task_item_view import TaskItemView
-from web_agent_sdk.types.task_log_file_response import TaskLogFileResponse
-from web_agent_sdk.types.task_view import TaskView
+from browser_use_sdk.types.task_created_response import TaskCreatedResponse
+from browser_use_sdk.types.task_item_view import TaskItemView
+from browser_use_sdk.types.task_log_file_response import TaskLogFileResponse
+from browser_use_sdk.types.task_view import TaskView
 
 from web_agent.skill_cli.commands.utils import format_duration, get_sdk_client
 

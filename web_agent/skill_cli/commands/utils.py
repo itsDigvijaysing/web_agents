@@ -2,7 +2,7 @@
 
 from datetime import datetime, timezone
 
-from web_agent_sdk import webagent
+from browser_use_sdk import webagent
 
 _client: webagent | None = None
 

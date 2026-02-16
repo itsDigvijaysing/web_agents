@@ -4,9 +4,9 @@ import logging
 import os
 from typing import Any, Literal
 
-from web_agent_sdk import Asyncwebagent
-from web_agent_sdk.types.execute_skill_response import ExecuteSkillResponse
-from web_agent_sdk.types.skill_list_response import SkillListResponse
+from browser_use_sdk import Asyncwebagent
+from browser_use_sdk.types.execute_skill_response import ExecuteSkillResponse
+from browser_use_sdk.types.skill_list_response import SkillListResponse
 from cdp_use.cdp.network import Cookie
 from pydantic import BaseModel, ValidationError
 

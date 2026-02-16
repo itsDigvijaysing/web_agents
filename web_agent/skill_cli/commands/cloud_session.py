@@ -12,9 +12,9 @@ import sys
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from typing import Any
 
-from web_agent_sdk.types.session_item_view import SessionItemView
-from web_agent_sdk.types.session_view import SessionView
-from web_agent_sdk.types.share_view import ShareView
+from browser_use_sdk.types.session_item_view import SessionItemView
+from browser_use_sdk.types.session_view import SessionView
+from browser_use_sdk.types.share_view import ShareView
 
 from web_agent.skill_cli.commands.utils import format_duration, get_sdk_client
 

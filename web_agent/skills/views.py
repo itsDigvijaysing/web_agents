@@ -2,8 +2,8 @@
 
 from typing import Any
 
-from web_agent_sdk.types.parameter_schema import ParameterSchema
-from web_agent_sdk.types.skill_response import SkillResponse
+from browser_use_sdk.types.parameter_schema import ParameterSchema
+from browser_use_sdk.types.skill_response import SkillResponse
 from pydantic import BaseModel, ConfigDict, Field
 
 
