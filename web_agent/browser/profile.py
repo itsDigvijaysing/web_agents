@@ -10,7 +10,6 @@ from urllib.parse import urlparse
 
 from pydantic import AfterValidator, AliasChoices, BaseModel, ConfigDict, Field, field_validator, model_validator
 
-from web_agent.browser.cloud.views import CloudBrowserParams
 from web_agent.config import CONFIG
 from web_agent.utils import _log_pretty_path, logger
 
@@ -561,19 +560,6 @@ class BrowserProfile(BrowserConnectArgs, BrowserLaunchPersistentContextArgs, Bro
 	# Session/connection configuration
 	cdp_url: str | None = Field(default=None, description='CDP URL for connecting to existing browser instance')
 	is_local: bool = Field(default=False, description='Whether this is a local browser instance')
-	use_cloud: bool = Field(
-		default=False,
-		description='Use web-agent cloud browser service instead of local browser',
-	)
-
-	@property
-	def cloud_browser(self) -> bool:
-		"""Alias for use_cloud field for compatibility."""
-		return self.use_cloud
-
-	cloud_browser_params: CloudBrowserParams | None = Field(
-		default=None, description='Parameters for creating a cloud browser instance'
-	)
 
 	# custom options we provide that aren't native playwright kwargs
 	disable_security: bool = Field(default=False, description='Disable browser security features.')

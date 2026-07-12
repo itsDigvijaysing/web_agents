@@ -11,18 +11,8 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any, Generic, Literal, TypeVar, cast
 from urllib.parse import urlparse
 
-if TYPE_CHECKING:
-	from web_agent.skills.views import Skill
-
 from dotenv import load_dotenv
 
-from web_agent.agent.cloud_events import (
-	CreateAgentOutputFileEvent,
-	CreateAgentSessionEvent,
-	CreateAgentStepEvent,
-	CreateAgentTaskEvent,
-	UpdateAgentTaskEvent,
-)
 from web_agent.agent.message_manager.utils import save_conversation
 from web_agent.llm.base import BaseChatModel
 from web_agent.llm.exceptions import ModelProviderError, ModelRateLimitError
@@ -141,10 +131,6 @@ class Agent(Generic[Context, AgentStructuredOutput]):
 		browser: Browser | None = None,  # Alias for browser_session
 		tools: Tools[Context] | None = None,
 		controller: Tools[Context] | None = None,  # Alias for tools
-		# Skills integration
-		skill_ids: list[str | Literal['*']] | None = None,
-		skills: list[str | Literal['*']] | None = None,  # Alias for skill_ids
-		skill_service: Any | None = None,
 		# Initial agent run parameters
 		sensitive_data: dict[str, str | dict[str, str]] | None = None,
 		initial_actions: list[dict[str, dict[str, Any]]] | None = None,
@@ -224,10 +210,10 @@ class Agent(Generic[Context, AgentStructuredOutput]):
 
 				llm = get_llm_by_name(default_llm_name)
 			else:
-				# No default LLM specified, use the original default
-				from web_agent import Chatwebagent
+				# No default LLM specified - auto-resolve from whichever provider API key is set
+				from web_agent.llm.models import resolve_default_llm
 
-				llm = Chatwebagent()
+				llm = resolve_default_llm()
 
 		# set flashmode = True if llm is Chatwebagent
 		if llm.provider == 'web-agent':
@@ -324,21 +310,6 @@ class Agent(Generic[Context, AgentStructuredOutput]):
 		)
 		if supports_coordinate_clicking:
 			self.tools.set_coordinate_clicking(True)
-
-		# Handle skills vs skill_ids parameter (skills takes precedence)
-		if skills and skill_ids:
-			raise ValueError('Cannot specify both "skills" and "skill_ids" parameters. Use "skills" for the cleaner API.')
-		skill_ids = skills or skill_ids
-
-		# Skills integration - use injected service or create from skill_ids
-		self.skill_service = None
-		self._skills_registered = False
-		if skill_service is not None:
-			self.skill_service = skill_service
-		elif skill_ids:
-			from web_agent.skills import SkillService
-
-			self.skill_service = SkillService(skill_ids=skill_ids)
 
 		# Structured output - use explicit param or detect from tools
 		tools_output_model = self.tools.get_output_model()
@@ -779,202 +750,6 @@ class Agent(Generic[Context, AgentStructuredOutput]):
 		else:
 			self.DoneAgentOutput = AgentOutput.type_with_custom_actions_no_thinking(self.DoneActionModel)
 
-	def _get_skill_slug(self, skill: 'Skill', all_skills: list['Skill']) -> str:
-		"""Generate a clean slug from skill title for action names
-
-		Converts title to lowercase, removes special characters, replaces spaces with underscores.
-		Adds UUID suffix if there are duplicate slugs.
-
-		Args:
-			skill: The skill to get slug for
-			all_skills: List of all skills to check for duplicates
-
-		Returns:
-			Slug like "cloned_github_stars_tracker" or "get_weather_data_a1b2" if duplicate
-
-		Examples:
-			"[Cloned] Github Stars Tracker" -> "cloned_github_stars_tracker"
-			"Get Weather Data" -> "get_weather_data"
-		"""
-		import re
-
-		# Remove special characters and convert to lowercase
-		slug = re.sub(r'[^\w\s]', '', skill.title.lower())
-		# Replace whitespace and hyphens with underscores
-		slug = re.sub(r'[\s\-]+', '_', slug)
-		# Remove leading/trailing underscores
-		slug = slug.strip('_')
-
-		# Check for duplicates and add UUID suffix if needed
-		same_slug_count = sum(
-			1 for s in all_skills if re.sub(r'[\s\-]+', '_', re.sub(r'[^\w\s]', '', s.title.lower()).strip('_')) == slug
-		)
-		if same_slug_count > 1:
-			return f'{slug}_{skill.id[:4]}'
-		else:
-			return slug
-
-	async def _register_skills_as_actions(self) -> None:
-		"""Register each skill as a separate action using slug as action name"""
-		if not self.skill_service or self._skills_registered:
-			return
-
-		self.logger.info('🔧 Registering skill actions...')
-
-		# Fetch all skills (auto-initializes if needed)
-		skills = await self.skill_service.get_all_skills()
-
-		if not skills:
-			self.logger.warning('No skills loaded from SkillService')
-			return
-
-		# Register each skill as its own action
-		for skill in skills:
-			slug = self._get_skill_slug(skill, skills)
-			param_model = skill.parameters_pydantic(exclude_cookies=True)
-
-			# Create description with skill title in quotes
-			description = f'{skill.description} (Skill: "{skill.title}")'
-
-			# Create handler for this specific skill
-			def make_skill_handler(skill_id: str):
-				async def skill_handler(params: BaseModel) -> ActionResult:
-					"""Execute a specific skill"""
-					assert self.skill_service is not None, 'SkillService not initialized'
-
-					# Convert parameters to dict
-					if isinstance(params, BaseModel):
-						skill_params = params.model_dump()
-					elif isinstance(params, dict):
-						skill_params = params
-					else:
-						return ActionResult(extracted_content=None, error=f'Invalid parameters type: {type(params)}')
-
-					# Get cookies from browser
-					_cookies = await self.browser_session.cookies()
-
-					try:
-						result = await self.skill_service.execute_skill(
-							skill_id=skill_id, parameters=skill_params, cookies=_cookies
-						)
-
-						if result.success:
-							return ActionResult(
-								extracted_content=str(result.result) if result.result else None,
-								error=None,
-							)
-						else:
-							return ActionResult(extracted_content=None, error=result.error or 'Skill execution failed')
-					except Exception as e:
-						# Check if it's a MissingCookieException
-						if type(e).__name__ == 'MissingCookieException':
-							# Format: "Missing cookies (name): description"
-							cookie_name = getattr(e, 'cookie_name', 'unknown')
-							cookie_description = getattr(e, 'cookie_description', str(e))
-							error_msg = f'Missing cookies ({cookie_name}): {cookie_description}'
-							return ActionResult(extracted_content=None, error=error_msg)
-						return ActionResult(extracted_content=None, error=f'Skill execution error: {type(e).__name__}: {e}')
-
-				return skill_handler
-
-			# Create the handler for this skill
-			handler = make_skill_handler(skill.id)
-			handler.__name__ = slug
-
-			# Register the action with the slug as the action name
-			self.tools.registry.action(description=description, param_model=param_model)(handler)
-
-		# Mark as registered
-		self._skills_registered = True
-
-		# Rebuild action models to include the new skill actions
-		self._setup_action_models()
-
-		# Reconvert initial actions with the new ActionModel type if they exist
-		if self.initial_actions:
-			# Convert back to dict form first
-			initial_actions_dict = []
-			for action in self.initial_actions:
-				action_dump = action.model_dump(exclude_unset=True)
-				initial_actions_dict.append(action_dump)
-			# Reconvert using new ActionModel
-			self.initial_actions = self._convert_initial_actions(initial_actions_dict)
-
-		self.logger.info(f'✓ Registered {len(skills)} skill actions')
-
-	async def _get_unavailable_skills_info(self) -> str:
-		"""Get information about skills that are unavailable due to missing cookies
-
-		Returns:
-			Formatted string describing unavailable skills and how to make them available
-		"""
-		if not self.skill_service:
-			return ''
-
-		try:
-			# Get all skills
-			skills = await self.skill_service.get_all_skills()
-			if not skills:
-				return ''
-
-			# Get current cookies
-			current_cookies = await self.browser_session.cookies()
-			cookie_dict = {cookie['name']: cookie['value'] for cookie in current_cookies}
-
-			# Check each skill for missing required cookies
-			unavailable_skills: list[dict[str, Any]] = []
-
-			for skill in skills:
-				# Get cookie parameters for this skill
-				cookie_params = [p for p in skill.parameters if p.type == 'cookie']
-
-				if not cookie_params:
-					# No cookies needed, skip
-					continue
-
-				# Check for missing required cookies
-				missing_cookies: list[dict[str, str]] = []
-				for cookie_param in cookie_params:
-					is_required = cookie_param.required if cookie_param.required is not None else True
-
-					if is_required and cookie_param.name not in cookie_dict:
-						missing_cookies.append(
-							{'name': cookie_param.name, 'description': cookie_param.description or 'No description provided'}
-						)
-
-				if missing_cookies:
-					unavailable_skills.append(
-						{
-							'id': skill.id,
-							'title': skill.title,
-							'description': skill.description,
-							'missing_cookies': missing_cookies,
-						}
-					)
-
-			if not unavailable_skills:
-				return ''
-
-			# Format the unavailable skills info with slugs
-			lines = ['Unavailable Skills (missing required cookies):']
-			for skill_info in unavailable_skills:
-				# Get the full skill object to use the slug helper
-				skill_obj = next((s for s in skills if s.id == skill_info['id']), None)
-				slug = self._get_skill_slug(skill_obj, skills) if skill_obj else skill_info['title']
-				title = skill_info['title']
-
-				lines.append(f'\n  • {slug} ("{title}")')
-				lines.append(f'    Description: {skill_info["description"]}')
-				lines.append('    Missing cookies:')
-				for cookie in skill_info['missing_cookies']:
-					lines.append(f'      - {cookie["name"]}: {cookie["description"]}')
-
-			return '\n'.join(lines)
-
-		except Exception as e:
-			self.logger.error(f'Error getting unavailable skills info: {type(e).__name__}: {e}')
-			return ''
-
 	def add_new_task(self, new_task: str) -> None:
 		"""Add a new task to the agent, keeping the same task_id as tasks are continuous"""
 		# Simply delegate to message manager - no need for new task_id or events
@@ -1073,10 +848,7 @@ class Agent(Generic[Context, AgentStructuredOutput]):
 		# Page-specific actions will be included directly in the browser_state message
 		self.logger.debug(f'💬 Step {self.state.n_steps}: Creating state messages for context...')
 
-		# Get unavailable skills info if skills service is enabled
 		unavailable_skills_info = None
-		if self.skill_service is not None:
-			unavailable_skills_info = await self._get_unavailable_skills_info()
 
 		# Render plan description for injection into agent context
 		plan_description = self._render_plan_description()
@@ -1306,25 +1078,6 @@ class Agent(Generic[Context, AgentStructuredOutput]):
 
 		# Save file system state after step completion
 		self.save_file_system_state()
-
-		# Emit both step created and executed events
-		if browser_state_summary and self.state.last_model_output:
-			# Extract key step data for the event
-			actions_data = []
-			if self.state.last_model_output.action:
-				for action in self.state.last_model_output.action:
-					action_dict = action.model_dump() if hasattr(action, 'model_dump') else {}
-					actions_data.append(action_dict)
-
-			# Emit CreateAgentStepEvent
-			step_event = CreateAgentStepEvent.from_agent_step(
-				self,
-				self.state.last_model_output,
-				self.state.last_result,
-				actions_data,
-				browser_state_summary,
-			)
-			self.eventbus.dispatch(step_event)
 
 		# Increment step counter after step is fully completed
 		self.state.n_steps += 1
@@ -2494,17 +2247,7 @@ class Agent(Generic[Context, AgentStructuredOutput]):
 			self._session_start_time = time.time()
 			self._task_start_time = self._session_start_time  # Initialize task start time
 
-			# Only dispatch session events if this is the first run
-			if not self.state.session_initialized:
-				self.logger.debug('📡 Dispatching CreateAgentSessionEvent...')
-				# Emit CreateAgentSessionEvent at the START of run()
-				self.eventbus.dispatch(CreateAgentSessionEvent.from_agent(self))
-
-				self.state.session_initialized = True
-
-			self.logger.debug('📡 Dispatching CreateAgentTaskEvent...')
-			# Emit CreateAgentTaskEvent at the START of run()
-			self.eventbus.dispatch(CreateAgentTaskEvent.from_agent(self))
+			self.state.session_initialized = True
 
 			# Log startup message on first step (only if we haven't already done steps)
 			self._log_first_step_startup()
@@ -2517,9 +2260,6 @@ class Agent(Generic[Context, AgentStructuredOutput]):
 					'info',
 					{'tag': 'status'},
 				)
-
-			# Register skills as actions if SkillService is configured
-			await self._register_skills_as_actions()
 
 			# Normally there was no try catch here but the callback can raise an InterruptedError
 			try:
@@ -2628,13 +2368,6 @@ class Agent(Generic[Context, AgentStructuredOutput]):
 				# ADDED: Info message when custom telemetry for SIGINT was already logged
 				self.logger.debug('Telemetry for force exit (SIGINT) was logged by custom exit callback.')
 
-			# NOTE: CreateAgentSessionEvent and CreateAgentTaskEvent are now emitted at the START of run()
-			# to match backend requirements for CREATE events to be fired when entities are created,
-			# not when they are completed
-
-			# Emit UpdateAgentTaskEvent at the END of run() with final task state
-			self.eventbus.dispatch(UpdateAgentTaskEvent.from_agent(self))
-
 			# Generate GIF if needed before stopping event bus
 			if self.settings.generate_gif:
 				output_path: str = 'agent_history.gif'
@@ -2645,11 +2378,6 @@ class Agent(Generic[Context, AgentStructuredOutput]):
 				from web_agent.agent.gif import create_history_gif
 
 				create_history_gif(task=self.task, history=self.history, output_path=output_path)
-
-				# Only emit output file event if GIF was actually created
-				if Path(output_path).exists():
-					output_event = await CreateAgentOutputFileEvent.from_agent_and_file(self, output_path)
-					self.eventbus.dispatch(output_event)
 
 			# Log final messages to user based on outcome
 			self._log_final_outcome_messages()
@@ -3912,10 +3640,6 @@ class Agent(Generic[Context, AgentStructuredOutput]):
 					# stops the EventBus with clear=True, and recreates a fresh EventBus
 					await self.browser_session.kill()
 
-			# Close skill service if configured
-			if self.skill_service is not None:
-				await self.skill_service.close()
-
 			# Force garbage collection
 			gc.collect()
 
@@ -3957,22 +3681,6 @@ class Agent(Generic[Context, AgentStructuredOutput]):
 			self.DoneAgentOutput = AgentOutput.type_with_custom_actions(self.DoneActionModel)
 		else:
 			self.DoneAgentOutput = AgentOutput.type_with_custom_actions_no_thinking(self.DoneActionModel)
-
-	async def authenticate_cloud_sync(self, show_instructions: bool = True) -> bool:
-		"""
-		Authenticate with cloud service for future runs.
-
-		This is useful when users want to authenticate after a task has completed
-		so that future runs will sync to the cloud.
-
-		Args:
-			show_instructions: Whether to show authentication instructions to user
-
-		Returns:
-			bool: True if authentication was successful
-		"""
-		self.logger.warning('Cloud sync has been removed and is no longer available')
-		return False
 
 	def run_sync(
 		self,

@@ -85,6 +85,36 @@ bu_latest: 'BaseChatModel'
 bu_1_0: 'BaseChatModel'
 bu_2_0: 'BaseChatModel'
 
+# Priority order for automatic default LLM resolution: (env var, factory)
+_DEFAULT_LLM_RESOLUTION_ORDER = (
+	('GROQ_API_KEY', lambda: __import__('web_agent.llm.groq.chat', fromlist=['ChatGroq']).ChatGroq(model='openai/gpt-oss-20b')),
+	('OPENAI_API_KEY', lambda: ChatOpenAI(model='gpt-4.1-mini')),
+	(
+		'ANTHROPIC_API_KEY',
+		lambda: __import__('web_agent.llm.anthropic.chat', fromlist=['ChatAnthropic']).ChatAnthropic(
+			model='claude-sonnet-4-0'
+		),
+	),
+	('GOOGLE_API_KEY', lambda: ChatGoogle(model='gemini-2.0-flash')),
+)
+
+
+def resolve_default_llm() -> 'BaseChatModel':
+	"""Resolve a default LLM from whichever provider API key is present in the environment.
+
+	Groq is checked first since it's this project's primary provider. Raises a clear
+	error if no supported API key is set, instead of silently using a proxy service.
+	"""
+	for env_var, factory in _DEFAULT_LLM_RESOLUTION_ORDER:
+		if os.getenv(env_var):
+			return factory()
+
+	checked = ', '.join(env_var for env_var, _ in _DEFAULT_LLM_RESOLUTION_ORDER)
+	raise ValueError(
+		f'No LLM provided and no API key found in the environment (checked: {checked}). '
+		'Pass an explicit llm= to Agent(), or set one of these environment variables.'
+	)
+
 
 def get_llm_by_name(model_name: str):
 	"""

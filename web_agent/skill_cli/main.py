@@ -871,86 +871,9 @@ def _parse_key_value_list(items: list[str] | None) -> dict[str, str | None] | No
 
 
 def _handle_remote_run_with_wait(args: argparse.Namespace) -> int:
-	"""Handle remote run with --wait directly (prints task info immediately, then waits)."""
-	import asyncio
-
-	from web_agent.skill_cli.commands import cloud_session, cloud_task
-
-	if not args.task:
-		print('Error: No task provided', file=sys.stderr)
-		return 1
-
-	try:
-		# Handle vision flag (--vision vs --no-vision)
-		vision: bool | None = None
-		if getattr(args, 'vision', False):
-			vision = True
-		elif getattr(args, 'no_vision', False):
-			vision = False
-
-		# Parse key=value list params
-		metadata = _parse_key_value_list(getattr(args, 'metadata', None))
-		secrets = _parse_key_value_list(getattr(args, 'secret', None))
-
-		# Build session params
-		session_id = getattr(args, 'session_id', None)
-		profile_id = getattr(args, 'profile', None)
-		proxy_country = getattr(args, 'proxy_country', None)
-
-		# Create session first if profile or proxy specified and no session_id
-		if (profile_id or proxy_country) and not session_id:
-			session = cloud_session.create_session(
-				profile_id=profile_id,
-				proxy_country=proxy_country,
-				keep_alive=getattr(args, 'keep_alive', None),
-			)
-			session_id = session.id
-
-		# Create task with all cloud-only flags
-		task_response = cloud_task.create_task(
-			task=args.task,
-			llm=args.llm,
-			session_id=session_id,
-			max_steps=args.max_steps,
-			flash_mode=getattr(args, 'flash', None),
-			thinking=getattr(args, 'thinking', None),
-			vision=vision,
-			start_url=getattr(args, 'start_url', None),
-			metadata=metadata,
-			secrets=secrets,
-			allowed_domains=getattr(args, 'allowed_domain', None),
-			skill_ids=getattr(args, 'skill_id', None),
-			structured_output=getattr(args, 'structured_output', None),
-			judge=getattr(args, 'judge', None),
-			judge_ground_truth=getattr(args, 'judge_ground_truth', None),
-		)
-
-		# Print initial info immediately
-		print(f'mode: {args.browser}')
-		print(f'task_id: {task_response.id}')
-		print(f'session_id: {task_response.session_id}')
-		print('waiting...', end='', flush=True)
-
-		# Wait for completion
-		try:
-			result = asyncio.run(cloud_task.poll_until_complete(task_response.id))
-		except KeyboardInterrupt:
-			print(f'\nInterrupted. Task {task_response.id} continues remotely.')
-			return 0
-
-		# Print final result
-		print(' done.')
-		print(f'status: {result.status}')
-		print(f'output: {result.output}')
-		if result.cost:
-			print(f'cost: {result.cost}')
-
-		return 0
-
-	except Exception as e:
-		print(f'Error: {e}', file=sys.stderr)
-		return 1
-
+	"""Cloud task execution has been removed from this project."""
+	print('Error: Cloud task execution has been removed from this project. Use --browser local instead.', file=sys.stderr)
+	return 1
 
 def main() -> int:
 	"""Main entry point."""
@@ -1085,17 +1008,10 @@ def main() -> int:
 				print(f'⚠ {result.get("summary", "Some checks need attention")}')
 		return 0
 
-	# Handle task command - cloud task management
-	if args.command == 'task':
-		from web_agent.skill_cli.commands.cloud_task import handle_task_command
-
-		return handle_task_command(args)
-
-	# Handle session command - cloud session management
-	if args.command == 'session':
-		from web_agent.skill_cli.commands.cloud_session import handle_session_command
-
-		return handle_session_command(args)
+	# Cloud task/session management has been removed from this project.
+	if args.command in ('task', 'session'):
+		print('Error: Cloud task/session management has been removed from this project.', file=sys.stderr)
+		return 1
 
 	# Handle tunnel command - runs independently of browser session
 	if args.command == 'tunnel':

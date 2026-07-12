@@ -75,105 +75,12 @@ async def handle(session: SessionInfo, params: dict[str, Any]) -> Any:
 
 
 async def _handle_cloud_task(params: dict[str, Any]) -> Any:
-	"""Handle task execution via Cloud API.
-
-	By default uses US proxy for all cloud tasks.
-	"""
-	from web_agent.skill_cli.commands import cloud_session, cloud_task
-
-	task = params['task']
-
-	# Handle vision flag (--vision vs --no-vision)
-	vision: bool | None = None
-	if params.get('vision'):
-		vision = True
-	elif params.get('no_vision'):
-		vision = False
-
-	# Parse key=value list params
-	metadata = _parse_key_value_list(params.get('metadata'))
-	secrets = _parse_key_value_list(params.get('secret'))
-
-	# Build session params - only include what user explicitly set
-	session_id = params.get('session_id')
-	profile_id = params.get('profile')
-	proxy_country = params.get('proxy_country')
-
-	try:
-		logger.info(f'Creating cloud task: {task}')
-
-		# Create session first if profile or proxy specified and no session_id
-		if (profile_id or proxy_country) and not session_id:
-			session = cloud_session.create_session(
-				profile_id=profile_id,
-				proxy_country=proxy_country,
-				keep_alive=params.get('keep_alive'),
-			)
-			session_id = session.id
-			logger.info(f'Created cloud session: {session_id}')
-
-		# Create cloud task - only pass what user explicitly set
-		task_response = cloud_task.create_task(
-			task=task,
-			llm=params.get('llm'),
-			session_id=session_id,
-			max_steps=params.get('max_steps'),
-			flash_mode=params.get('flash'),
-			thinking=params.get('thinking'),
-			vision=vision,
-			start_url=params.get('start_url'),
-			metadata=metadata,
-			secrets=secrets,
-			allowed_domains=params.get('allowed_domain'),
-			skill_ids=params.get('skill_id'),
-			structured_output=params.get('structured_output'),
-			judge=params.get('judge'),
-			judge_ground_truth=params.get('judge_ground_truth'),
-		)
-
-		task_id = task_response.id
-		response_session_id = task_response.session_id
-
-		if not task_id:
-			return {
-				'success': False,
-				'error': 'Cloud API did not return a task ID',
-				'task': task,
-			}
-
-		logger.info(f'Cloud task created: {task_id}')
-
-		# Return immediately unless --wait is specified
-		if not params.get('wait'):
-			return {
-				'success': True,
-				'task_id': task_id,
-				'session_id': response_session_id,
-				'message': 'Task started. Use "web-agent task status <task_id>" to check progress.',
-			}
-
-		# Poll until complete
-		logger.info('Waiting for task completion...')
-		result = await cloud_task.poll_until_complete(task_id, stream=params.get('stream', False))
-
-		return {
-			'success': True,
-			'task': task,
-			'task_id': task_id,
-			'session_id': response_session_id,
-			'status': result.status,
-			'output': result.output,
-			'cost': result.cost,
-			'done': result.status == 'finished',
-		}
-
-	except Exception as e:
-		logger.exception(f'Cloud task failed: {e}')
-		return {
-			'success': False,
-			'error': str(e),
-			'task': task,
-		}
+	"""Cloud task execution has been removed. Use local mode (--browser local) instead."""
+	return {
+		'success': False,
+		'error': 'Cloud task execution has been removed from this project. Use --browser local instead.',
+		'task': params.get('task'),
+	}
 
 
 def _parse_key_value_list(items: list[str] | None) -> dict[str, str | None] | None:

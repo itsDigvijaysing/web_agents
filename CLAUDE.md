@@ -2,7 +2,9 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-web-agent is an async python >= 3.11 library that implements AI browser driver abilities using LLMs + CDP (Chrome DevTools Protocol). The core architecture enables AI agents to autonomously navigate web pages, interact with elements, and complete complex tasks by processing HTML and making LLM-driven decisions.
+web-agent is a **standalone** async python >= 3.11 library that implements AI browser driver abilities using LLMs + CDP (Chrome DevTools Protocol). The core architecture enables AI agents to autonomously navigate web pages, interact with elements, and complete complex tasks by processing HTML and making LLM-driven decisions.
+
+Its foundation was the open-source **browser-use** project (MIT, © 2024 Gregor Zunic), imported and mechanically renamed `browser_use`→`web_agent`. The engine is inherited and sound; the project is now being evolved into its own system. That rename left defects — see **Project Lineage & Known Issues** below before assuming the docs match the code.
 
 ## High-Level Architecture
 
@@ -18,18 +20,41 @@ The library follows an event-driven architecture with several key components:
 
 ### Event-Driven Browser Management
 
-BrowserSession uses a `bubus` event bus to coordinate watchdog services:
-- **DownloadsWatchdog**: Handles PDF auto-download and file management
-- **PopupsWatchdog**: Manages JavaScript dialogs and popups
-- **SecurityWatchdog**: Enforces domain restrictions and security policies
-- **DOMWatchdog**: Processes DOM snapshots, screenshots, and element highlighting
-- **AboutBlankWatchdog**: Handles empty page redirects
+BrowserSession uses a `bubus` event bus to coordinate **13** watchdog services (in `web_agent/browser/watchdogs/`). Each is a `BaseWatchdog` subclass whose `on_<Event>` methods are auto-registered via `attach_to_session()`. The main ones:
+- **DOMWatchdog**: DOM snapshot + accessibility tree build; orchestrates `DomService`
+- **DefaultActionWatchdog**: executes the actual CDP interactions (click/type/scroll/navigate) — the real workhorse
+- **DownloadsWatchdog**: PDF auto-download / file management via CDP `Browser.downloadWillBegin`
+- **ScreenshotWatchdog**: page screenshots
+- **PopupsWatchdog**: JavaScript dialogs · **SecurityWatchdog**: domain restrictions
+- **LocalBrowserWatchdog**: launches/kills the local Chrome process
+- **AboutBlankWatchdog**, **PermissionsWatchdog**, **StorageStateWatchdog**, **RecordingWatchdog**, **HarRecordingWatchdog** (last two conditional)
+- **CrashWatchdog**: the class EXISTS but is NEVER instantiated (commented out in `session.py`) — crash recovery is currently a no-op despite what README/REPORT claim.
 
 ### CDP Integration
 
-Uses `cdp-use` (https://github.com/web-agent/cdp-use) for typed CDP protocol access. All CDP client management lives in `web_agent/browser/session.py`.
+Uses the `cdp-use` PyPI package for typed CDP protocol access. CDP connection + session pooling is centralized in `web_agent/browser/session.py` and `session_manager.py`; the typed CDP *commands* themselves (`cdp_client.send.<Domain>.<method>`) are issued throughout `dom/`, `tools/`, `actor/`, and the watchdogs. The Agent itself never issues CDP directly.
 
 We want our library APIs to be ergonomic, intuitive, and hard to get wrong.
+
+## Project Lineage & Known Issues (from code audit 2026-07-13)
+
+This is a **standalone project** built on the **browser-use** foundation (MIT). The inherited engine — agent loop, watchdog event bus, DOM/a11y serialization, tool registry, multi-provider LLM layer — is genuine and well-tested. The mechanical `browser_use`→`web_agent` rename introduced defects that are being actively removed. Treat this section as ground truth over the inherited markdown.
+
+**License / attribution:** keep the MIT notice `© 2024 Gregor Zunic` in `LICENSE` (MIT requires retaining it) and add our own copyright line alongside it. Building a standalone derivative is fully permitted — acknowledge the lineage, don't scrub it.
+
+**Conventions going forward:**
+- Do NOT reintroduce `browser_use`/`BrowserUse` identifiers. The only legitimate `browser_use_sdk` usage is the external cloud SDK dependency (in `skills/`, `skill_cli/`) — leave those imports alone unless removing that feature entirely.
+- **Env vars:** target convention is `WEB_AGENT_*` (UPPER_SNAKE). The code currently reads legacy mixed-case `web_agent_*` names with `case_sensitive=True` in `config.py` — a rename artifact that silently drops conventionally-cased vars. New vars must be UPPER_SNAKE; migrate legacy ones with alias support (`AliasChoices` / `case_sensitive=False`), not a hard swap.
+- **Cloud endpoints:** all first-party cloud/sandbox/live-view/default-LLM endpoints point at placeholder `*.web-agent.com` domains that are not operated — do not rely on them. `Agent(llm=None)` falls back to the dead `Chatwebagent()` cloud proxy (`llm.api.web-agent.com`); always pass an explicit `llm=`.
+
+**Known dead code / real bugs (fix or remove deliberately):**
+- `CrashWatchdog` never instantiated (`session.py` ~1371); commented import even has the wrong path.
+- DOM: `[N]` indices are the raw CDP `backend_node_id`, not a compact index (`_interactive_counter` in the serializer is dead). `is_element_visible_according_to_all_parents` mutates `snapshot_node.bounds` in place without copying (`dom/service.py` ~273) — corrupts coordinates on scrolled/nested pages. `and`/`or` precedence bug in `dom/clickable_elements.py` ~46 (missing parens; `AttributeError` if `tag_name` is None).
+- `_handle_download` (`downloads_watchdog.py` ~986) is dead Playwright-era code. PopupsWatchdog registers duplicate dialog handlers per tab on the shared root client.
+- Provider quirks: Ollama silently ignores `temperature`; one Groq path returns `usage=None`; OCI's `provider` field shadows the Protocol identifier.
+- Doc drift: `.env.example` documents `web_agent_PROXY_SERVER` (code reads `web_agent_PROXY_URL`) and `web_agent_EXECUTABLE_PATH` (not read anywhere).
+
+**Do NOT trust the inherited markdown as ground truth** — REPORT.md, CLOUD.md, and AGENTS.md describe browser-use's design with names swapped and are uncritical of the rename damage (e.g. REPORT.md lists dead endpoints and unwired env vars as if intentional). Validate claims against code.
 
 ## Development Commands
 
