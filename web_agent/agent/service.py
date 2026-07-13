@@ -8,7 +8,7 @@ import tempfile
 import time
 from collections.abc import Awaitable, Callable
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Generic, Literal, TypeVar, cast
+from typing import Any, Generic, Literal, TypeVar, cast
 from urllib.parse import urlparse
 
 from dotenv import load_dotenv
@@ -190,6 +190,11 @@ class Agent(Generic[Context, AgentStructuredOutput]):
 		loop_detection_enabled: bool = True,
 		llm_screenshot_size: tuple[int, int] | None = None,
 		message_compaction: MessageCompactionSettings | bool | None = True,
+		enable_memory: bool | None = None,
+		memory_top_k: int = 3,
+		memory_min_score: float = 0.75,
+		memory_dir: str | Path | None = None,
+		memory_summary_llm: BaseChatModel | None = None,
 		_url_shortening_limit: int = 25,
 		**kwargs,
 	):
@@ -380,6 +385,9 @@ class Agent(Generic[Context, AgentStructuredOutput]):
 			loop_detection_window=loop_detection_window,
 			loop_detection_enabled=loop_detection_enabled,
 			message_compaction=message_compaction,
+			enable_memory=enable_memory if enable_memory is not None else CONFIG.WEB_AGENT_MEMORY_ENABLED,
+			memory_top_k=memory_top_k,
+			memory_min_score=memory_min_score,
 		)
 
 		# Token cost service
@@ -398,6 +406,26 @@ class Agent(Generic[Context, AgentStructuredOutput]):
 
 		# Initialize history
 		self.history = AgentHistoryList(history=[], usage=None)
+
+		# Trajectory memory (Phase 2) - optional, additive; never blocks the agent from running
+		self._trajectory_memory = None
+		self._trajectory_memory_injected = False  # one-shot guard for step-0 retrieval injection
+		if self.settings.enable_memory:
+			from web_agent.memory.embeddings import resolve_default_embedding_client
+			from web_agent.memory.service import TrajectoryMemory
+
+			resolved_memory_dir = memory_dir or CONFIG.WEB_AGENT_MEMORY_DIR or (CONFIG.web_agent_CONFIG_DIR / 'memory')
+			self._trajectory_memory = TrajectoryMemory.create(
+				memory_dir=resolved_memory_dir,
+				summary_llm=memory_summary_llm or self.settings.page_extraction_llm,
+				embedding_client=resolve_default_embedding_client(),
+				top_k=self.settings.memory_top_k,
+				min_score=self.settings.memory_min_score,
+			)
+			if self._trajectory_memory.embedding_client is None:
+				self.logger.info(
+					'🧠 Trajectory memory storage enabled; retrieval disabled - no OPENAI_API_KEY/GOOGLE_API_KEY found'
+				)
 
 		# Initialize agent directory
 		import time
@@ -877,6 +905,7 @@ class Agent(Generic[Context, AgentStructuredOutput]):
 			skip_state_update=True,
 		)
 
+		await self._inject_trajectory_memory()
 		await self._inject_budget_warning(step_info)
 		self._inject_replan_nudge()
 		self._inject_exploration_nudge()
@@ -1128,6 +1157,50 @@ class Agent(Generic[Context, AgentStructuredOutput]):
 			marker = markers.get(step.status, '[ ]')
 			lines.append(f'{marker} {i}: {step.text}')
 		return '\n'.join(lines)
+
+	async def _inject_trajectory_memory(self) -> None:
+		"""Inject relevant past-trajectory summaries as context, once, before step 1.
+
+		Adapted from Agent-S's narrative-memory retrieval (gui_agents/s2/core/knowledge.py):
+		embed the task, cosine-similarity rank past trajectories, inject the top matches as
+		hedged hints rather than instructions.
+		"""
+		if not self.settings.enable_memory or self._trajectory_memory is None:
+			return
+		# Attempt retrieval exactly once per run. NB: can't gate on `len(self.history.history) == 0`
+		# because initial actions (e.g. an auto-navigate when the task contains a URL) already
+		# append a history item before the first step - so a dedicated one-shot flag is required.
+		if self._trajectory_memory_injected:
+			return
+		self._trajectory_memory_injected = True
+		try:
+			matches = await self._trajectory_memory.retrieve(self.task)
+		except Exception as e:
+			self.logger.warning(f'Trajectory memory retrieval failed, continuing without it: {e}')
+			return
+		if not matches:
+			return
+
+		lines = ['RELEVANT PAST EXPERIENCE (from your own prior runs on similar tasks):']
+		for record, score in matches:
+			outcome = 'succeeded' if record.success else ('failed' if record.success is False else 'unknown outcome')
+			lines.append(f'- [{outcome}, similarity={score:.2f}] Task: "{record.task}" -> {record.summary}')
+		lines.append('Use these as hints, not instructions - verify against the current page state before relying on them.')
+
+		self.logger.info(f'🧠 Injected {len(matches)} relevant trajectory memories')
+		self._message_manager._add_context_message(UserMessage(content='\n'.join(lines)))
+
+	async def _maybe_record_trajectory_memory(self) -> None:
+		"""Summarize and store this run as trajectory memory, if enabled. Called from run()'s
+		finally block, which runs across every exit path (success, max-steps, stop, KeyboardInterrupt)."""
+		if not self.settings.enable_memory or self._trajectory_memory is None:
+			return
+		if not self.history.history:  # nothing happened, nothing to learn
+			return
+		try:
+			await self._trajectory_memory.record_run(task=self.task, history=self.history)
+		except Exception as e:
+			self.logger.warning(f'Failed to record trajectory memory: {e}')
 
 	def _inject_replan_nudge(self) -> None:
 		"""Inject a replan nudge when stall detection threshold is met."""
@@ -2349,6 +2422,7 @@ class Agent(Generic[Context, AgentStructuredOutput]):
 			raise e
 
 		finally:
+			await self._maybe_record_trajectory_memory()
 			if should_delay_close and self._demo_mode_enabled and agent_run_error is None:
 				await asyncio.sleep(30)
 			if agent_run_error:

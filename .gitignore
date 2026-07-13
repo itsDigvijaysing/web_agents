@@ -84,3 +84,6 @@ product_extraction.py
 plot.py
 
 .claude/
+# Cloned reference repos (study aids for Phase 2, not part of this project's source)
+CLONE/
+CLAUDE.md

@@ -2,16 +2,50 @@
 
 AI-powered browser automation using LLMs and Chrome DevTools Protocol (CDP).
 
-`web-agent` is a standalone async Python library, built on the foundation of the open-source [browser-use](https://github.com/browser-use/browser-use) project (MIT), that enables AI agents to autonomously navigate web pages, interact with elements, and complete complex tasks by processing HTML/DOM state and making LLM-driven decisions.
-
 ## Features
 
 - **Multi-LLM Support** — Groq (default), OpenAI, Anthropic, Google Gemini, Ollama, Azure, AWS Bedrock, and more
 - **Chrome DevTools Protocol** — Direct browser control via CDP through the [cdp-use](https://pypi.org/project/cdp-use/) package
 - **Event-Driven Architecture** — Modular watchdog system for downloads, popups, security, and DOM handling
+- **Trajectory Memory** — the agent learns from its own past runs: it records a condensed "lesson" after each task and retrieves relevant ones to prime similar future tasks (retrieval-augmented, [see below](#trajectory-memory-learning-from-past-runs))
 - **MCP Integration** — Run as an MCP server for Claude Desktop or connect to external MCP servers
 - **Code Agent** — Jupyter-like code execution capabilities for data analysis tasks
 - **DOM Serialization** — Intelligent DOM extraction with accessibility tree generation and element highlighting
+
+## How It Works
+
+The agent runs a tight **observe → decide → act** loop, optionally augmented with retrieval over its own past experience:
+
+```mermaid
+flowchart TD
+    Start([Agent.run task]) --> Mem{Trajectory<br/>memory enabled?}
+    Mem -- yes --> Retr[Embed task → cosine-search<br/>past trajectories]
+    Retr --> Inject[Inject relevant lessons<br/>into LLM context]
+    Mem -- no --> Loop
+    Inject --> Loop
+
+    subgraph Loop [Step loop · repeat until done]
+        direction TB
+        Obs[Observe: capture browser state<br/>DOM snapshot + a11y tree + screenshot via CDP] --> Ser[Serialize DOM into<br/>indexed interactive elements]
+        Ser --> Msg[MessageManager builds prompt<br/>system + history + state + memory]
+        Msg --> LLM[LLM decides next actions<br/>structured AgentOutput]
+        LLM --> Act[multi_act → Tools → typed events<br/>→ watchdogs → CDP commands]
+        Act --> Done{done?}
+        Done -- no --> Obs
+    end
+
+    Done -- yes --> Rec{Memory<br/>enabled?}
+    Rec -- yes --> Sum[Summarize run into a lesson<br/>LLM] --> Emb[Embed + append to<br/>trajectories.jsonl store]
+    Emb --> End([Return AgentHistoryList])
+    Rec -- no --> End
+
+    style Retr fill:#e3f2fd,stroke:#1565c0
+    style Inject fill:#e3f2fd,stroke:#1565c0
+    style Sum fill:#e8f5e9,stroke:#2e7d32
+    style Emb fill:#e8f5e9,stroke:#2e7d32
+```
+
+The blue nodes are memory **retrieval** (read side, before step 0); the green nodes are memory **recording** (write side, after the run). Both are opt-in and skipped entirely when memory is disabled — the core loop is unchanged.
 
 ## Quick Start
 
@@ -204,15 +238,46 @@ uv run pre-commit run --all-files
 | Ollama | Any local model | (local) |
 | DeepSeek, Mistral, Cerebras, OpenRouter, Vercel, OCI | — | see `web_agent/llm/` |
 
+## Trajectory Memory (learning from past runs)
+
+The agent can learn from its own past runs: after each `Agent.run()`, it condenses what
+happened into a short "lesson" and stores it; on future similar tasks, relevant past lessons
+are retrieved and injected as hints. Adapted from Agent S's narrative-memory approach
+([simular-ai/Agent-S](https://github.com/simular-ai/Agent-S)) — embed → cosine-similarity
+rank → inject, using an embedding provider of your choice (no vector database).
+
+```python
+agent = Agent(task="...", llm=llm, enable_memory=True)
+```
+
+or globally via env:
+
+```env
+WEB_AGENT_MEMORY_ENABLED=true
+```
+
+**Storage** works with any LLM provider (the run is summarized by your agent's own model).
+**Retrieval** additionally needs an embedding provider — pick one of:
+
+| Provider | How | Notes |
+|----------|-----|-------|
+| OpenAI | set `OPENAI_API_KEY` | auto-detected; `text-embedding-3-small` default |
+| Google | set `GOOGLE_API_KEY` | auto-detected; `text-embedding-004` default |
+| **Ollama** (local, no key) | `WEB_AGENT_EMBEDDING_PROVIDER=ollama` | needs `ollama serve` + `ollama pull nomic-embed-text` |
+
+Groq and Anthropic have **no embeddings endpoint**, so with only a Groq key memory degrades
+**gracefully to storage-only** (it records lessons but can't retrieve them) rather than failing —
+use Ollama for fully local, keyless retrieval. Requires `pip install web-agent[memory]`.
+See [.env.example](.env.example) for all `WEB_AGENT_MEMORY_*` / `WEB_AGENT_EMBEDDING_*` options.
+
+Trajectories are stored as append-only JSONL at `~/.config/webagent/memory/trajectories.jsonl`
+(override with `WEB_AGENT_MEMORY_DIR`).
+
 ## Roadmap
 
-The current agent loop (observe → decide → act) is a solid foundation; the next phase adds
-**retrieval over experience and external knowledge** on top of it, rather than a from-scratch
-RAG stack — following the approach of projects like Agent S (experience-augmented hierarchical
-planning) and Explorer (trajectory dataset/reuse):
-
-- **Trajectory retrieval** — store and retrieve past `AgentHistoryList` runs to prime the agent with relevant prior experience
-- **Knowledge-augmented context** — retrieval-augmented context injection alongside the existing DOM/screenshot state
+- **Knowledge-augmented context** — the agent is now prompted to search proactively for
+  unfamiliar facts (prices, current events, specs) rather than only as error recovery; a
+  richer pre-task research step remains a possible future enhancement
 - **Vision Pipeline Optimization** — enhanced screenshot and visual element processing
 
 ## Configuration

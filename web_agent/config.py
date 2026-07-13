@@ -194,6 +194,31 @@ class OldConfig:
 	def WIN_FONT_DIR(self) -> str:
 		return os.getenv('WIN_FONT_DIR', 'C:\\Windows\\Fonts')
 
+	# Trajectory memory (Phase 2)
+	@property
+	def WEB_AGENT_MEMORY_ENABLED(self) -> bool:
+		return os.getenv('WEB_AGENT_MEMORY_ENABLED', 'false').lower()[:1] in 'ty1'
+
+	@property
+	def WEB_AGENT_MEMORY_DIR(self) -> str | None:
+		return os.getenv('WEB_AGENT_MEMORY_DIR')
+
+	@property
+	def WEB_AGENT_MEMORY_TOP_K(self) -> int:
+		return int(os.getenv('WEB_AGENT_MEMORY_TOP_K', '3'))
+
+	@property
+	def WEB_AGENT_MEMORY_MIN_SCORE(self) -> float:
+		return float(os.getenv('WEB_AGENT_MEMORY_MIN_SCORE', '0.75'))
+
+	@property
+	def WEB_AGENT_EMBEDDING_PROVIDER(self) -> str | None:
+		return os.getenv('WEB_AGENT_EMBEDDING_PROVIDER')
+
+	@property
+	def WEB_AGENT_EMBEDDING_MODEL(self) -> str | None:
+		return os.getenv('WEB_AGENT_EMBEDDING_MODEL')
+
 
 class FlatEnvConfig(BaseSettings):
 	"""All environment variables in a flat namespace."""
@@ -249,6 +274,14 @@ class FlatEnvConfig(BaseSettings):
 
 	# Extension env vars
 	web_agent_DISABLE_EXTENSIONS: bool | None = Field(default=None)
+
+	# Trajectory memory (Phase 2)
+	WEB_AGENT_MEMORY_ENABLED: bool = Field(default=False)
+	WEB_AGENT_MEMORY_DIR: str | None = Field(default=None)
+	WEB_AGENT_MEMORY_TOP_K: int = Field(default=3)
+	WEB_AGENT_MEMORY_MIN_SCORE: float = Field(default=0.75)
+	WEB_AGENT_EMBEDDING_PROVIDER: str | None = Field(default=None)
+	WEB_AGENT_EMBEDDING_MODEL: str | None = Field(default=None)
 
 
 class DBStyleEntry(BaseModel):

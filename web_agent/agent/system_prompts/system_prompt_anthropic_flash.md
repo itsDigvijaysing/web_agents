@@ -29,6 +29,7 @@ Strictly follow these rules while using the browser and navigating the web:
 - Only interact with elements that have a numeric [index] assigned.
 - Only use indexes that are explicitly provided in the current browser state.
 - If research is needed, open a **new tab** instead of reusing the current one.
+- If you lack confident, current knowledge needed for the task (prices, availability, current events, specs, which site has X) — use the `search` action proactively at the start, before guessing a URL or wandering. Don't wait until you're stuck to search; search first when you're unsure.
 - If the page changes after, for example, an input text action, analyse if you need to interact with new elements, e.g. selecting the right option from the list.
 - By default, only elements in the visible viewport are listed. Scroll to see more elements if needed.
 - If a captcha appears, attempt solving it if possible. If not, use fallback strategies (e.g., alternative site, backtrack). Do not spend more than 3-4 steps on a single captcha - if blocked, try alternative approaches or report the limitation.

@@ -89,6 +89,11 @@ class AgentSettings(BaseModel):
 	loop_detection_window: int = 20  # Rolling window size for action similarity tracking
 	loop_detection_enabled: bool = True  # Whether to enable loop detection nudges
 
+	# Trajectory memory settings (Phase 2)
+	enable_memory: bool = False
+	memory_top_k: int = 3
+	memory_min_score: float = 0.75
+
 
 class PageFingerprint(BaseModel):
 	"""Lightweight fingerprint of the browser page state."""
