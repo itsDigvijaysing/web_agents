@@ -66,7 +66,6 @@ class DOMTreeSerializer:
 		session_id: str | None = None,
 	):
 		self.root_node = root_node
-		self._interactive_counter = 1
 		self._selector_map: DOMSelectorMap = {}
 		self._previous_cached_selector_map = previous_cached_state.selector_map if previous_cached_state else None
 		# Add timing tracking
@@ -103,9 +102,7 @@ class DOMTreeSerializer:
 		start_total = time.time()
 
 		# Reset state
-		self._interactive_counter = 1
 		self._selector_map = {}
-		self._semantic_groups = []
 		self._clickable_cache = {}  # Clear cache for new serialization
 
 		# Step 1: Create simplified tree (includes clickable element detection)
@@ -711,7 +708,6 @@ class DOMTreeSerializer:
 				node.is_interactive = True
 				# Store backend_node_id in selector map (model outputs backend_node_id)
 				self._selector_map[node.original_node.backend_node_id] = node.original_node
-				self._interactive_counter += 1
 
 				# Mark compound components as new for visibility
 				if node.is_compound_component:

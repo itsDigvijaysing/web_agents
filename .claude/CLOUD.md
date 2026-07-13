@@ -1,4 +1,14 @@
-# Cloud.md
+# Cloud.md — ARCHIVED, NOT APPLICABLE TO THIS FORK
+
+> **This entire document describes browser-use's hosted Cloud product (Sessions, Browsers-as-a-service,
+> billing, `cloud.web-agent.com`). That product's client code (`browser/cloud/`, `sandbox/`, `skills/`,
+> `sync/`) was deliberately removed from this standalone fork in 2026-07 — see `CLAUDE.md` → Project
+> Lineage & Known Issues. Nothing below is implemented in this codebase. Kept only as historical/design
+> reference (e.g. the Session/Browser/Agent/Task mental model) — do not treat any instructions,
+> parameters, URLs, or API keys below as valid for this project.**
+
+---
+
 Instructions for AI Agents to assist the user in using web agent Cloud
 
 ## What is web agent Cloud?

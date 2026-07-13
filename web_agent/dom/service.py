@@ -269,11 +269,17 @@ class DomService:
 		except (ValueError, TypeError):
 			pass
 
-		# Start with the element's local bounds (in its own frame's coordinate system)
-		current_bounds = node.snapshot_node.bounds
+		# Start with a COPY of the element's local bounds (in its own frame's coordinate system).
+		# This is a pure predicate - it must not mutate the node's stored snapshot bounds,
+		# which are read again later by the serializer, paint-order filtering, etc.
+		original_bounds = node.snapshot_node.bounds
 
-		if not current_bounds:
+		if not original_bounds:
 			return False  # If there are no bounds, the element is not visible
+
+		current_bounds = DOMRect(
+			x=original_bounds.x, y=original_bounds.y, width=original_bounds.width, height=original_bounds.height
+		)
 
 		# If threshold is None, skip all viewport-based filtering (only check CSS visibility)
 		if viewport_threshold is None:

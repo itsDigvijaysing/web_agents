@@ -327,7 +327,6 @@ class BrowserSession(BaseModel):
 	_closed_popup_messages: list[str] = PrivateAttr(default_factory=list)  # Store messages from auto-closed JavaScript dialogs
 
 	# Watchdogs
-	_crash_watchdog: Any | None = PrivateAttr(default=None)
 	_downloads_watchdog: Any | None = PrivateAttr(default=None)
 	_aboutblank_watchdog: Any | None = PrivateAttr(default=None)
 	_security_watchdog: Any | None = PrivateAttr(default=None)
@@ -406,7 +405,6 @@ class BrowserSession(BaseModel):
 		if self.is_local:
 			self.browser_profile.cdp_url = None
 
-		self._crash_watchdog = None
 		self._downloads_watchdog = None
 		self._aboutblank_watchdog = None
 		self._security_watchdog = None
@@ -660,8 +658,7 @@ class BrowserSession(BaseModel):
 
 			# Note: These should be handled by dedicated watchdogs:
 			# - Security checks (security_watchdog)
-			# - Page health checks (crash_watchdog)
-			# - Dialog handling (dialog_watchdog)
+			# - Dialog handling (popups_watchdog)
 			# - Download handling (downloads_watchdog)
 			# - DOM rebuilding (dom_watchdog)
 
@@ -1232,8 +1229,6 @@ class BrowserSession(BaseModel):
 			return
 
 		from web_agent.browser.watchdogs.aboutblank_watchdog import AboutBlankWatchdog
-
-		# from web_agent.browser.crash_watchdog import CrashWatchdog
 		from web_agent.browser.watchdogs.default_action_watchdog import DefaultActionWatchdog
 		from web_agent.browser.watchdogs.dom_watchdog import DOMWatchdog
 		from web_agent.browser.watchdogs.downloads_watchdog import DownloadsWatchdog
@@ -1245,13 +1240,6 @@ class BrowserSession(BaseModel):
 		from web_agent.browser.watchdogs.screenshot_watchdog import ScreenshotWatchdog
 		from web_agent.browser.watchdogs.security_watchdog import SecurityWatchdog
 		from web_agent.browser.watchdogs.storage_state_watchdog import StorageStateWatchdog
-
-		# Initialize CrashWatchdog
-		# CrashWatchdog.model_rebuild()
-		# self._crash_watchdog = CrashWatchdog(event_bus=self.event_bus, browser_session=self)
-		# self.event_bus.on(BrowserConnectedEvent, self._crash_watchdog.on_BrowserConnectedEvent)
-		# self.event_bus.on(BrowserStoppedEvent, self._crash_watchdog.on_BrowserStoppedEvent)
-		# self._crash_watchdog.attach_to_session()
 
 		# Initialize DownloadsWatchdog
 		DownloadsWatchdog.model_rebuild()

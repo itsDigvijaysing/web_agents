@@ -19,6 +19,8 @@ class PopupsWatchdog(BaseWatchdog):
 
 	# Track which targets have dialog handlers registered
 	_dialog_listeners_registered: set[str] = PrivateAttr(default_factory=set)
+	# The root CDP client is shared across all tabs - only needs its handler registered once
+	_root_dialog_handler_registered: bool = PrivateAttr(default=False)
 
 	def __init__(self, **kwargs):
 		super().__init__(**kwargs)
@@ -48,8 +50,11 @@ class PopupsWatchdog(BaseWatchdog):
 			except Exception as e:
 				self.logger.debug(f'Failed to enable Page domain: {e}')
 
-			# Also register for the root CDP client to catch dialogs from any frame
-			if self.browser_session._cdp_client_root:
+			# Also register for the root CDP client to catch dialogs from any frame.
+			# The root client is shared across all tabs, so this only needs to happen once -
+			# every registered handler is behaviorally identical (it reads browser_session
+			# state dynamically rather than capturing anything tab-specific).
+			if self.browser_session._cdp_client_root and not self._root_dialog_handler_registered:
 				self.logger.debug('📌 Also registering handler on root CDP client')
 				try:
 					# Enable Page domain on root client too
@@ -128,10 +133,11 @@ class PopupsWatchdog(BaseWatchdog):
 				f'Successfully registered Page.javascriptDialogOpening handler for session {cdp_session.session_id}'
 			)
 
-			# Also register on root CDP client to catch dialogs from any frame
-			if hasattr(self.browser_session._cdp_client_root, 'register'):
+			# Also register on root CDP client to catch dialogs from any frame (once only, see above)
+			if not self._root_dialog_handler_registered and hasattr(self.browser_session._cdp_client_root, 'register'):
 				try:
 					self.browser_session._cdp_client_root.register.Page.javascriptDialogOpening(handle_dialog)  # type: ignore[arg-type]
+					self._root_dialog_handler_registered = True
 					self.logger.debug('Successfully registered dialog handler on root CDP client for all frames')
 				except Exception as root_error:
 					self.logger.warning(f'Failed to register on root CDP client: {root_error}')

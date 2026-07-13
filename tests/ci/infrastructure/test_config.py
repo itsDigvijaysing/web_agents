@@ -91,6 +91,54 @@ class TestLazyConfig:
 			else:
 				os.environ.pop('XDG_CACHE_HOME', None)
 
+	def test_uppercase_env_var_is_read(self):
+		"""WEB_AGENT_* (upper-snake) should work, not just the legacy mixed-case web_agent_*."""
+		original = os.environ.get('web_agent_LOGGING_LEVEL', '')
+		original_upper = os.environ.get('WEB_AGENT_LOGGING_LEVEL', '')
+		try:
+			os.environ.pop('web_agent_LOGGING_LEVEL', None)
+			os.environ['WEB_AGENT_LOGGING_LEVEL'] = 'debug'
+			assert CONFIG.web_agent_LOGGING_LEVEL == 'debug'
+		finally:
+			os.environ.pop('WEB_AGENT_LOGGING_LEVEL', None)
+			if original:
+				os.environ['web_agent_LOGGING_LEVEL'] = original
+			if original_upper:
+				os.environ['WEB_AGENT_LOGGING_LEVEL'] = original_upper
+
+	def test_uppercase_env_var_takes_precedence_over_legacy(self):
+		"""When both WEB_AGENT_* and legacy web_agent_* are set, the uppercase one wins."""
+		original = os.environ.get('web_agent_LOGGING_LEVEL', '')
+		original_upper = os.environ.get('WEB_AGENT_LOGGING_LEVEL', '')
+		try:
+			os.environ['web_agent_LOGGING_LEVEL'] = 'warning'
+			os.environ['WEB_AGENT_LOGGING_LEVEL'] = 'debug'
+			assert CONFIG.web_agent_LOGGING_LEVEL == 'debug'
+		finally:
+			if original:
+				os.environ['web_agent_LOGGING_LEVEL'] = original
+			else:
+				os.environ.pop('web_agent_LOGGING_LEVEL', None)
+			if original_upper:
+				os.environ['WEB_AGENT_LOGGING_LEVEL'] = original_upper
+			else:
+				os.environ.pop('WEB_AGENT_LOGGING_LEVEL', None)
+
+	def test_flat_env_config_proxy_url_uppercase(self):
+		"""FlatEnvConfig-only fields (e.g. proxy URL) should also accept the uppercase name."""
+		from web_agent.config import FlatEnvConfig
+
+		original = os.environ.get('WEB_AGENT_PROXY_URL', '')
+		try:
+			os.environ['WEB_AGENT_PROXY_URL'] = 'http://proxy.example.com:8080'
+			env_config = FlatEnvConfig()
+			assert env_config.web_agent_PROXY_URL == 'http://proxy.example.com:8080'
+		finally:
+			if original:
+				os.environ['WEB_AGENT_PROXY_URL'] = original
+			else:
+				os.environ.pop('WEB_AGENT_PROXY_URL', None)
+
 	def test_cloud_sync_inherits_telemetry(self):
 		"""Test web_agent_CLOUD_SYNC inherits from ANONYMIZED_TELEMETRY when not set."""
 		telemetry_original = os.environ.get('ANONYMIZED_TELEMETRY', '')

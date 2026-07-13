@@ -426,15 +426,6 @@ class AgentFocusChangedEvent(BaseEvent):
 	event_timeout: float | None = Field(default_factory=lambda: _get_timeout('TIMEOUT_AgentFocusChangedEvent', 10.0))  # seconds
 
 
-class TargetCrashedEvent(BaseEvent):
-	"""A target has crashed."""
-
-	target_id: TargetID
-	error: str
-
-	event_timeout: float | None = Field(default_factory=lambda: _get_timeout('TIMEOUT_TargetCrashedEvent', 10.0))  # seconds
-
-
 class NavigationStartedEvent(BaseEvent):
 	"""Navigation started."""
 

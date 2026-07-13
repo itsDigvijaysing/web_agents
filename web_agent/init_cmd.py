@@ -24,8 +24,11 @@ from rich.text import Text
 # Rich console for styled output
 console = Console()
 
-# GitHub template repository URL (for runtime fetching)
-TEMPLATE_REPO_URL = 'https://raw.githubusercontent.com/web-agent/template-library/main'
+# GitHub template repository URL (for runtime fetching).
+# This points at browser-use's real, public template-library repo (this fork doesn't
+# publish its own yet) - the mechanical browser_use->web_agent rename had pointed this
+# at a non-existent 'web-agent/template-library' org.
+TEMPLATE_REPO_URL = 'https://raw.githubusercontent.com/browser-use/template-library/main'
 
 # Export for backward compatibility with cli.py
 # Templates are fetched at runtime via _get_template_list()

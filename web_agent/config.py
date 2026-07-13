@@ -44,6 +44,20 @@ def is_running_in_docker() -> bool:
 	return False
 
 
+def _getenv_migrated(legacy_name: str, default: str | None = None) -> str | None:
+	"""Read an env var preferring its WEB_AGENT_* (upper-snake) form over the legacy mixed-case `web_agent_*` name.
+
+	`legacy_name` is the historical mixed-case name (a rename artifact from `browser_use`->`web_agent`);
+	`WEB_AGENT_<REST>` is the proper upper-snake convention and always wins if set.
+	"""
+	assert legacy_name.startswith('web_agent_'), f'expected a legacy web_agent_* name, got: {legacy_name}'
+	upper_name = 'WEB_AGENT_' + legacy_name[len('web_agent_') :]
+	value = os.getenv(upper_name)
+	if value is not None:
+		return value
+	return os.getenv(legacy_name, default)
+
+
 class OldConfig:
 	"""Original lazy-loading configuration class for environment variables."""
 
@@ -52,7 +66,7 @@ class OldConfig:
 
 	@property
 	def web_agent_LOGGING_LEVEL(self) -> str:
-		return os.getenv('web_agent_LOGGING_LEVEL', 'info').lower()
+		return _getenv_migrated('web_agent_LOGGING_LEVEL', 'info').lower()
 
 	@property
 	def ANONYMIZED_TELEMETRY(self) -> bool:
@@ -60,20 +74,20 @@ class OldConfig:
 
 	@property
 	def web_agent_CLOUD_SYNC(self) -> bool:
-		return os.getenv('web_agent_CLOUD_SYNC', str(self.ANONYMIZED_TELEMETRY)).lower()[:1] in 'ty1'
+		return _getenv_migrated('web_agent_CLOUD_SYNC', str(self.ANONYMIZED_TELEMETRY)).lower()[:1] in 'ty1'
 
 	@property
 	def web_agent_CLOUD_API_URL(self) -> str:
-		url = os.getenv('web_agent_CLOUD_API_URL', 'https://api.web-agent.com')
-		assert '://' in url, 'web_agent_CLOUD_API_URL must be a valid URL'
+		url = _getenv_migrated('web_agent_CLOUD_API_URL', 'https://api.web-agent.com')
+		assert url and '://' in url, 'WEB_AGENT_CLOUD_API_URL must be a valid URL'
 		return url
 
 	@property
 	def web_agent_CLOUD_UI_URL(self) -> str:
-		url = os.getenv('web_agent_CLOUD_UI_URL', '')
+		url = _getenv_migrated('web_agent_CLOUD_UI_URL', '')
 		# Allow empty string as default, only validate if set
 		if url and '://' not in url:
-			raise AssertionError('web_agent_CLOUD_UI_URL must be a valid URL if set')
+			raise AssertionError('WEB_AGENT_CLOUD_UI_URL must be a valid URL if set')
 		return url
 
 	# Path configuration
@@ -87,7 +101,7 @@ class OldConfig:
 
 	@property
 	def web_agent_CONFIG_DIR(self) -> Path:
-		path = Path(os.getenv('web_agent_CONFIG_DIR', str(self.XDG_CONFIG_HOME / 'webagent'))).expanduser().resolve()
+		path = Path(_getenv_migrated('web_agent_CONFIG_DIR', str(self.XDG_CONFIG_HOME / 'webagent'))).expanduser().resolve()
 		self._ensure_dirs()
 		return path
 
@@ -114,9 +128,9 @@ class OldConfig:
 	def _ensure_dirs(self) -> None:
 		"""Create directories if they don't exist (only once)"""
 		if not self._dirs_created:
-			config_dir = (
-				Path(os.getenv('web_agent_CONFIG_DIR', str(self.XDG_CONFIG_HOME / 'webagent'))).expanduser().resolve()
-			)
+			config_dir = Path(
+				_getenv_migrated('web_agent_CONFIG_DIR', str(self.XDG_CONFIG_HOME / 'webagent'))
+			).expanduser().resolve()
 			config_dir.mkdir(parents=True, exist_ok=True)
 			(config_dir / 'profiles').mkdir(parents=True, exist_ok=True)
 			(config_dir / 'extensions').mkdir(parents=True, exist_ok=True)
@@ -174,7 +188,7 @@ class OldConfig:
 
 	@property
 	def web_agent_VERSION_CHECK(self) -> bool:
-		return os.getenv('web_agent_VERSION_CHECK', 'true').lower()[:1] in 'ty1'
+		return _getenv_migrated('web_agent_VERSION_CHECK', 'true').lower()[:1] in 'ty1'
 
 	@property
 	def WIN_FONT_DIR(self) -> str:
@@ -184,7 +198,9 @@ class OldConfig:
 class FlatEnvConfig(BaseSettings):
 	"""All environment variables in a flat namespace."""
 
-	model_config = SettingsConfigDict(env_file='.env', env_file_encoding='utf-8', case_sensitive=True, extra='allow')
+	# case_sensitive=False lets WEB_AGENT_* (upper-snake) env vars populate these legacy
+	# mixed-case `web_agent_*` field names too - a rename artifact fix, not a design choice.
+	model_config = SettingsConfigDict(env_file='.env', env_file_encoding='utf-8', case_sensitive=False, extra='allow')
 
 	# Logging and telemetry
 	web_agent_LOGGING_LEVEL: str = Field(default='info')
