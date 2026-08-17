@@ -150,8 +150,7 @@
           "introduction",
           "quickstart",
           "quickstart_llm",
-          "supported-models",
-          "production"
+          "supported-models"
         ]
       },
       {
@@ -204,14 +203,6 @@
             ]
           },
           {
-            "group": "Skills",
-            "icon": "sparkles",
-            "isDefaultOpen": false,
-            "pages": [
-              "customize/skills/basics"
-            ]
-          },
-          {
             "group": "Actor",
             "icon": "terminal",
             "isDefaultOpen": false,
@@ -228,16 +219,6 @@
             "pages": [
               "customize/integrations/docs-mcp",
               "customize/integrations/mcp-server"
-            ]
-          },
-          {
-            "group": "Sandbox",
-            "icon": "box",
-            "isDefaultOpen": false,
-            "pages": [
-              "customize/sandbox/quickstart",
-              "customize/sandbox/events",
-              "customize/sandbox/all-parameters"
             ]
           }
         ]
