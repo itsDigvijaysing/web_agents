@@ -119,7 +119,7 @@ def http_server():
 		content_type='text/html',
 	)
 
-	# Page 6: Input where clear fails — input event listener restores old text
+	# Page 6: Input where clear fails - input event listener restores old text
 	# Simulates a framework-controlled input where clearing triggers re-render with old state
 	server.expect_request('/sticky-input').respond_with_data(
 		"""
@@ -293,7 +293,7 @@ class TestAutocompleteInteraction:
 			session_id=cdp_session.session_id,
 		)
 		actual = readback.get('result', {}).get('value', '')
-		assert actual == 'new value', f'Expected "new value", got "{actual}" — clear=True did not remove old text'
+		assert actual == 'new value', f'Expected "new value", got "{actual}" - clear=True did not remove old text'
 
 	async def test_prefilled_input_append_with_clear_false(self, tools: Tools, browser_session: BrowserSession, base_url: str):
 		"""Type into a pre-filled input with clear=False. Field should contain old + new text."""
@@ -344,7 +344,7 @@ class TestAutocompleteInteraction:
 		# Even if the event listener fires on the retry's dispatched events, the native setter
 		# bypasses instance-level interception. The value may or may not be perfect depending
 		# on how the JS listener interacts, but it should not be "prefix_typed_text" (raw concatenation).
-		assert actual != 'prefix_typed_text', f'Got raw concatenation "{actual}" — retry should have prevented this'
+		assert actual != 'prefix_typed_text', f'Got raw concatenation "{actual}" - retry should have prevented this'
 
 	async def test_combobox_field_adds_delay(self, tools: Tools, browser_session: BrowserSession, base_url: str):
 		"""Typing into a combobox (role=combobox) field should take >= 400ms due to the mechanical delay."""
@@ -360,11 +360,11 @@ class TestAutocompleteInteraction:
 		await tools.input(index=combo_idx, text='hi', browser_session=browser_session)
 		duration = time.monotonic() - t0
 
-		# The 400ms sleep is a hard floor — total duration must exceed it
+		# The 400ms sleep is a hard floor - total duration must exceed it
 		assert duration >= 0.4, f'Combobox delay not present: input took only {duration:.3f}s (expected >= 0.4s)'
 
 	async def test_datalist_field_no_delay(self, tools: Tools, browser_session: BrowserSession, base_url: str):
-		"""Native datalist fields should NOT get the 400ms delay — browser handles them instantly."""
+		"""Native datalist fields should NOT get the 400ms delay - browser handles them instantly."""
 		import time
 
 		await tools.navigate(url=f'{base_url}/datalist-field', new_tab=False, browser_session=browser_session)

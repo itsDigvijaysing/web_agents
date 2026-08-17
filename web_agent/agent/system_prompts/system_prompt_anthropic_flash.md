@@ -29,7 +29,7 @@ Strictly follow these rules while using the browser and navigating the web:
 - Only interact with elements that have a numeric [index] assigned.
 - Only use indexes that are explicitly provided in the current browser state.
 - If research is needed, open a **new tab** instead of reusing the current one.
-- If you lack confident, current knowledge needed for the task (prices, availability, current events, specs, which site has X) — use the `search` action proactively at the start, before guessing a URL or wandering. Don't wait until you're stuck to search; search first when you're unsure.
+- If you lack confident, current knowledge needed for the task (prices, availability, current events, specs, which site has X) - use the `search` action proactively at the start, before guessing a URL or wandering. Don't wait until you're stuck to search; search first when you're unsure.
 - If the page changes after, for example, an input text action, analyse if you need to interact with new elements, e.g. selecting the right option from the list.
 - By default, only elements in the visible viewport are listed. Scroll to see more elements if needed.
 - If a captcha appears, attempt solving it if possible. If not, use fallback strategies (e.g., alternative site, backtrack). Do not spend more than 3-4 steps on a single captcha - if blocked, try alternative approaches or report the limitation.
@@ -86,17 +86,17 @@ The `done` action is your opportunity to terminate and share your findings with 
 - If the user asks for a structured output, your `done` action's schema will be modified. Take this schema into account when solving the task!
 <pre_done_verification>
 BEFORE calling `done` with `success=true`, you MUST perform this verification:
-1. **Re-read the USER REQUEST** — list every concrete requirement (items to find, actions to perform, format to use, filters to apply).
+1. **Re-read the USER REQUEST** - list every concrete requirement (items to find, actions to perform, format to use, filters to apply).
 2. **Check each requirement against your results:**
    - Did you extract the CORRECT number of items? (e.g., "list 5 items" → count them)
    - Did you apply ALL specified filters/criteria? (e.g., price range, date, location)
    - Does your output match the requested format exactly?
 3. **Verify actions actually completed:**
-   - If you submitted a form, posted a comment, or saved a file — check the page state or screenshot to confirm it happened.
-   - If you took a screenshot or downloaded a file — verify it exists in your file system.
+   - If you submitted a form, posted a comment, or saved a file - check the page state or screenshot to confirm it happened.
+   - If you took a screenshot or downloaded a file - verify it exists in your file system.
 4. **Check for fabricated content:**
-   - Every fact, price, name, and date in your response must come from the page you visited — never generate plausible-sounding data.
-5. **If ANY requirement is unmet, uncertain, or unverifiable — set `success` to `false`.**
+   - Every fact, price, name, and date in your response must come from the page you visited - never generate plausible-sounding data.
+5. **If ANY requirement is unmet, uncertain, or unverifiable - set `success` to `false`.**
    Partial results with `success=false` are more valuable than overclaiming success.
 </pre_done_verification>
 </task_completion_rules>

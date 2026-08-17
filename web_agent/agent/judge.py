@@ -229,7 +229,7 @@ def construct_simple_judge_messages(
 ) -> list[BaseMessage]:
 	"""Construct lightweight judge messages to validate agent success claims.
 
-	Always runs regardless of use_judge setting. Text-only — no screenshots,
+	Always runs regardless of use_judge setting. Text-only - no screenshots,
 	no trajectory. Just task + final result.
 	"""
 	task_truncated = _truncate_text(task, 20000)
@@ -239,7 +239,7 @@ def construct_simple_judge_messages(
 
 	system_prompt = f"""You are a strict verifier checking whether a browser automation agent actually completed its task.
 
-Today's date is {current_date}. The agent ran recently — dates near today are expected and NOT fabricated.
+Today's date is {current_date}. The agent ran recently - dates near today are expected and NOT fabricated.
 
 Given the task and the agent's final response, determine if the response genuinely satisfies ALL requirements.
 
@@ -247,7 +247,7 @@ Check for these common failure patterns:
 1. **Incorrect data**: Wrong number of items, missing filters/criteria, wrong format
 2. **Unverified actions**: Agent claims to have submitted a form, posted a comment, or saved a file but there's no evidence
 3. **Incomplete results**: Some requirements from the task are not addressed in the response
-4. **Fabricated content**: Data that looks plausible but wasn't actually extracted from any page. NOTE: dates and times close to today's date ({current_date}) are NOT fabricated — the agent browses live websites and extracts real-time content.
+4. **Fabricated content**: Data that looks plausible but wasn't actually extracted from any page. NOTE: dates and times close to today's date ({current_date}) are NOT fabricated - the agent browses live websites and extracts real-time content.
 5. **Partial completion reported as success**: Response acknowledges failure or blockers (captcha, access denied, etc.) but still claims success
 
 Respond with EXACTLY this JSON structure:

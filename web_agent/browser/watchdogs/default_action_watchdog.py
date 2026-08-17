@@ -1896,7 +1896,7 @@ class DefaultActionWatchdog(BaseWatchdog):
 					and len(actual_value) > len(text)
 					and (actual_value.endswith(text) or actual_value.startswith(text))
 				):
-					self.logger.info(f'🔄 Concatenation detected: got "{actual_value}", expected "{text}" — auto-retrying')
+					self.logger.info(f'🔄 Concatenation detected: got "{actual_value}", expected "{text}" - auto-retrying')
 					try:
 						# Clear + set value via native setter in one JS call (works with React/Vue)
 						retry_result = await cdp_session.cdp_client.send.Runtime.callFunctionOn(
@@ -3412,10 +3412,10 @@ class DefaultActionWatchdog(BaseWatchdog):
 					)
 					if all_empty:
 						self.logger.info(
-							'⚠️ All dropdown options are empty — options may be lazily loaded. Focusing element and retrying...'
+							'⚠️ All dropdown options are empty - options may be lazily loaded. Focusing element and retrying...'
 						)
 
-						# Use element.focus() only — no synthetic mouse events that leak isTrusted=false
+						# Use element.focus() only - no synthetic mouse events that leak isTrusted=false
 						try:
 							await cdp_session.cdp_client.send.Runtime.callFunctionOn(
 								params={

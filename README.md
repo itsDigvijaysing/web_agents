@@ -4,13 +4,13 @@ AI-powered browser automation using LLMs and Chrome DevTools Protocol (CDP).
 
 ## Features
 
-- **Multi-LLM Support** — Groq (default), OpenAI, Anthropic, Google Gemini, Ollama, Azure, AWS Bedrock, and more
-- **Chrome DevTools Protocol** — Direct browser control via CDP through the [cdp-use](https://pypi.org/project/cdp-use/) package
-- **Event-Driven Architecture** — Modular watchdog system for downloads, popups, security, and DOM handling
-- **Trajectory Memory** — the agent learns from its own past runs: it records a condensed "lesson" after each task and retrieves relevant ones to prime similar future tasks (retrieval-augmented, [see below](#trajectory-memory-learning-from-past-runs))
-- **MCP Integration** — Run as an MCP server for Claude Desktop or connect to external MCP servers
-- **Code Agent** — Jupyter-like code execution capabilities for data analysis tasks
-- **DOM Serialization** — Intelligent DOM extraction with accessibility tree generation and element highlighting
+- **Multi-LLM Support** - Groq (default), OpenAI, Anthropic, Google Gemini, Ollama, Azure, AWS Bedrock, and more
+- **Chrome DevTools Protocol** - Direct browser control via CDP through the [cdp-use](https://pypi.org/project/cdp-use/) package
+- **Event-Driven Architecture** - Modular watchdog system for downloads, popups, security, and DOM handling
+- **Trajectory Memory** - the agent learns from its own past runs: it records a condensed "lesson" after each task and retrieves relevant ones to prime similar future tasks (retrieval-augmented, [see below](#trajectory-memory-learning-from-past-runs))
+- **MCP Integration** - Run as an MCP server for Claude Desktop or connect to external MCP servers
+- **Code Agent** - Jupyter-like code execution capabilities for data analysis tasks
+- **DOM Serialization** - Intelligent DOM extraction with accessibility tree generation and element highlighting
 
 ## How It Works
 
@@ -45,7 +45,7 @@ flowchart TD
     style Emb fill:#e8f5e9,stroke:#2e7d32
 ```
 
-The blue nodes are memory **retrieval** (read side, before step 0); the green nodes are memory **recording** (write side, after the run). Both are opt-in and skipped entirely when memory is disabled — the core loop is unchanged.
+The blue nodes are memory **retrieval** (read side, before step 0); the green nodes are memory **recording** (write side, after the run). Both are opt-in and skipped entirely when memory is disabled - the core loop is unchanged.
 
 ## Quick Start
 
@@ -176,7 +176,7 @@ web_agent/
 
 | Component | Description |
 |-----------|-------------|
-| **Agent** | Main orchestrator — takes tasks, manages browser sessions, runs LLM action loop |
+| **Agent** | Main orchestrator - takes tasks, manages browser sessions, runs LLM action loop |
 | **BrowserSession** | Manages browser lifecycle, CDP connections, coordinates watchdog services via event bus |
 | **Tools** | Action registry mapping LLM decisions to browser operations |
 | **DomService** | Extracts and processes DOM content, handles element highlighting and a11y tree |
@@ -186,11 +186,11 @@ web_agent/
 
 BrowserSession uses a [bubus](https://pypi.org/project/bubus/) event bus to coordinate 12 watchdog services (`web_agent/browser/watchdogs/`), including:
 
-- **DownloadsWatchdog** — File download handling
-- **PopupsWatchdog** — JavaScript dialog management
-- **SecurityWatchdog** — Domain restrictions and security policies
-- **DOMWatchdog** — DOM snapshots, screenshots, element highlighting
-- **DefaultActionWatchdog** — Executes click/type/scroll/navigate CDP commands
+- **DownloadsWatchdog** - File download handling
+- **PopupsWatchdog** - JavaScript dialog management
+- **SecurityWatchdog** - Domain restrictions and security policies
+- **DOMWatchdog** - DOM snapshots, screenshots, element highlighting
+- **DefaultActionWatchdog** - Executes click/type/scroll/navigate CDP commands
 
 ## Development
 
@@ -236,14 +236,14 @@ uv run pre-commit run --all-files
 | Azure | Azure OpenAI models | `AZURE_OPENAI_KEY` |
 | AWS | Bedrock models | `AWS_ACCESS_KEY_ID` |
 | Ollama | Any local model | (local) |
-| DeepSeek, Mistral, Cerebras, OpenRouter, Vercel, OCI | — | see `web_agent/llm/` |
+| DeepSeek, Mistral, Cerebras, OpenRouter, Vercel, OCI | - | see `web_agent/llm/` |
 
 ## Trajectory Memory (learning from past runs)
 
 The agent can learn from its own past runs: after each `Agent.run()`, it condenses what
 happened into a short "lesson" and stores it; on future similar tasks, relevant past lessons
 are retrieved and injected as hints. Adapted from Agent S's narrative-memory approach
-([simular-ai/Agent-S](https://github.com/simular-ai/Agent-S)) — embed → cosine-similarity
+([simular-ai/Agent-S](https://github.com/simular-ai/Agent-S)) - embed → cosine-similarity
 rank → inject, using an embedding provider of your choice (no vector database).
 
 ```python
@@ -257,7 +257,7 @@ WEB_AGENT_MEMORY_ENABLED=true
 ```
 
 **Storage** works with any LLM provider (the run is summarized by your agent's own model).
-**Retrieval** additionally needs an embedding provider — pick one of:
+**Retrieval** additionally needs an embedding provider - pick one of:
 
 | Provider | How | Notes |
 |----------|-----|-------|
@@ -266,8 +266,8 @@ WEB_AGENT_MEMORY_ENABLED=true
 | **Ollama** (local, no key) | `WEB_AGENT_EMBEDDING_PROVIDER=ollama` | needs `ollama serve` + `ollama pull nomic-embed-text` |
 
 Groq and Anthropic have **no embeddings endpoint**, so with only a Groq key memory degrades
-**gracefully to storage-only** (it records lessons but can't retrieve them) rather than failing —
-use Ollama for fully local, keyless retrieval. Requires `pip install web-agent[memory]`.
+**gracefully to storage-only** (it records lessons but can't retrieve them) rather than failing.
+Use Ollama for fully local, keyless retrieval. Requires `pip install web-agent[memory]`.
 See [.env.example](.env.example) for all `WEB_AGENT_MEMORY_*` / `WEB_AGENT_EMBEDDING_*` options.
 
 Trajectories are stored as append-only JSONL at `~/.config/webagent/memory/trajectories.jsonl`
@@ -275,10 +275,10 @@ Trajectories are stored as append-only JSONL at `~/.config/webagent/memory/traje
 
 ## Roadmap
 
-- **Knowledge-augmented context** — the agent is now prompted to search proactively for
+- **Knowledge-augmented context** - the agent is now prompted to search proactively for
   unfamiliar facts (prices, current events, specs) rather than only as error recovery; a
   richer pre-task research step remains a possible future enhancement
-- **Vision Pipeline Optimization** — enhanced screenshot and visual element processing
+- **Vision Pipeline Optimization** - enhanced screenshot and visual element processing
 
 ## Configuration
 
@@ -290,4 +290,4 @@ provider keys, proxy settings, and telemetry. Env vars use upper-snake `WEB_AGEN
 
 ## License
 
-MIT License — see [LICENSE](LICENSE) for details.
+MIT License - see [LICENSE](LICENSE) for details.

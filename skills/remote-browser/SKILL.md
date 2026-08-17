@@ -6,7 +6,7 @@ allowed-tools: Bash(web-agent:*)
 
 # Remote Browser Automation for Sandboxed Agents
 
-This skill is for agents running on **sandboxed remote machines** (cloud VMs, CI, coding agents) that need to control a browser. Install `web-agent` and drive a cloud browser — no local Chrome needed.
+This skill is for agents running on **sandboxed remote machines** (cloud VMs, CI, coding agents) that need to control a browser. Install `web-agent` and drive a cloud browser - no local Chrome needed.
 
 ## Setup
 
@@ -50,7 +50,7 @@ web-agent doctor
 
 ## Core Workflow
 
-When installed with `--remote-only`, commands automatically use the cloud browser — no `--browser` flag needed:
+When installed with `--remote-only`, commands automatically use the cloud browser - no `--browser` flag needed:
 
 ```bash
 # Step 1: Start session (automatically uses remote mode)
@@ -610,13 +610,13 @@ done
 
 ## Tips
 
-1. **Install with `--remote-only`** for sandboxed environments — no `--browser` flag needed
+1. **Install with `--remote-only`** for sandboxed environments - no `--browser` flag needed
 2. **Always run `state` first** to see available elements and their indices
-3. **Sessions persist** across commands — the browser stays open until you close it
-4. **Tunnels are independent** — they don't require or create a browser session, and persist across `web-agent close`
+3. **Sessions persist** across commands - the browser stays open until you close it
+4. **Tunnels are independent** - they don't require or create a browser session, and persist across `web-agent close`
 5. **Use `--json`** for programmatic parsing
-6. **`tunnel` is idempotent** — calling it again for the same port returns the existing URL
-7. **Close when done** — `web-agent close` closes the browser; `web-agent tunnel stop --all` stops tunnels
+6. **`tunnel` is idempotent** - calling it again for the same port returns the existing URL
+7. **Close when done** - `web-agent close` closes the browser; `web-agent tunnel stop --all` stops tunnels
 
 ## Troubleshooting
 
@@ -637,8 +637,8 @@ done
 
 **Element not found?**
 - Run `web-agent state` to see current elements
-- `web-agent scroll down` then `web-agent state` — element might be below fold
-- Page may have changed — re-run `state` to get fresh indices
+- `web-agent scroll down` then `web-agent state` - element might be below fold
+- Page may have changed - re-run `state` to get fresh indices
 
 ## Cleanup
 
