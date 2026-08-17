@@ -83,7 +83,9 @@ product_extraction.py
 *report.md
 plot.py
 
+# Agent instruction files: kept on disk for local tooling, out of version control
 .claude/
+CLAUDE.md
+AGENTS.md
 # Cloned reference repos (study aids for Phase 2, not part of this project's source)
 CLONE/
-CLAUDE.md
